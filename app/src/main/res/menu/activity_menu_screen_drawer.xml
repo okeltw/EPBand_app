@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <group android:checkableBehavior="single">
+        <item
+            android:id="@+id/nav_device"
+            android:icon="@drawable/ic_bluetooth_24dp"
+            android:title="Device Setup" />
+        <item
+            android:id="@+id/nav_edit_workout"
+            android:icon="@drawable/ic_note_add_24dp"
+            android:title="Workout Templates" />
+        <item
+            android:id="@+id/nav_profile"
+            android:icon="@drawable/ic_profile_24dp"
+            android:title="Profile" />
+        <item
+            android:id="@+id/nav_review"
+            android:icon="@drawable/ic_chart_24dp"
+            android:title="View Analysis" />
+        <item
+            android:id="@+id/nav_workout_start"
+            android:icon="@drawable/ic_check_circle_24dp"
+            android:title="Start Workout" />
+    </group>
+
+</menu>
