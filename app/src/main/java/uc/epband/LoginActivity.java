@@ -3,6 +3,8 @@ package uc.epband;
 import android.animation.Animator;
 import android.animation.AnimatorListenerAdapter;
 import android.annotation.TargetApi;
+import android.app.FragmentManager;
+import android.app.FragmentTransaction;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.support.annotation.NonNull;
@@ -334,8 +336,13 @@ public class LoginActivity extends AppCompatActivity implements LoaderCallbacks<
             showProgress(false);
 
             if (success) {
-                Intent intent = new Intent(LoginActivity.this, MenuScreen.class);
-                startActivityForResult(intent,2);
+                //Intent intent = new Intent(LoginActivity.this, MenuScreen.class);
+                //startActivityForResult(intent,2);
+                FragmentManager fragmentManager = getFragmentManager();
+                //FragmentTransaction fragmentTransaction = fragmentManager.beginTransaction();
+                //bluetooth_pairing fragment = new bluetooth_pairing();
+                //fragmentTransaction.add(R.id.fragment, fragment);
+                //fragmentTransaction.commit();
                 finish();
             } else {
                 mPasswordView.setError(getString(R.string.error_incorrect_password));

@@ -1,0 +1,109 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="fill_parent"
+    android:layout_height="fill_parent"
+    android:weightSum="1">
+
+    <ImageView
+        android:layout_width="match_parent"
+        android:layout_height="192dp"
+        android:id="@+id/profileSymbol"
+        android:layout_gravity="center"
+        android:src="@drawable/ic_profile_24dp"
+        android:layout_alignParentEnd="false"
+        android:layout_alignParentTop="false"
+        android:layout_alignParentBottom="false"
+        android:layout_alignParentStart="false"
+        android:layout_alignParentLeft="false"
+        android:adjustViewBounds="false"
+        android:layout_marginTop="@dimen/abc_action_bar_progress_bar_size" />
+
+    <TableLayout
+        android:layout_width="fill_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom"
+        android:layout_below="@+id/profileSymbol">
+
+        <TableRow
+            android:layout_width="match_parent"
+            android:layout_height="match_parent">
+
+            <TextView
+                android:layout_width="144dp"
+                android:layout_height="48dp"
+                android:text="Name:"
+                android:id="@+id/name_label"
+                android:singleLine="false"
+                android:editable="false"
+                android:clickable="false"
+                android:layout_gravity="center|right"
+                android:textStyle="bold"
+                android:textSize="24sp" />
+
+            <EditText
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:inputType="textPersonName"
+                android:ems="10"
+                android:id="@+id/name_value"
+                android:editable="true"
+                android:layout_gravity="right" />
+
+        </TableRow>
+
+        <TableRow
+            android:layout_width="match_parent"
+            android:layout_height="match_parent" >
+
+            <TextView
+                android:layout_width="144dp"
+                android:layout_height="48dp"
+                android:text="Weight (lb):"
+                android:id="@+id/weight_label"
+                android:singleLine="false"
+                android:editable="false"
+                android:clickable="false"
+                android:layout_gravity="center|right"
+                android:textStyle="bold"
+                android:textSize="24sp" />
+
+            <EditText
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:inputType="number"
+                android:ems="10"
+                android:id="@+id/weight_value"
+                android:editable="true"
+                android:layout_gravity="right" />
+
+        </TableRow>
+
+        <TableRow
+            android:layout_width="match_parent"
+            android:layout_height="match_parent" >
+
+            <TextView
+                android:layout_width="144dp"
+                android:layout_height="48dp"
+                android:text="Height (in):"
+                android:id="@+id/height_label"
+                android:singleLine="false"
+                android:editable="false"
+                android:clickable="false"
+                android:layout_gravity="center|right"
+                android:textStyle="bold"
+                android:textSize="24sp" />
+
+            <EditText
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:inputType="number"
+                android:ems="10"
+                android:id="@+id/height_value"
+                android:editable="true"
+                android:layout_gravity="right" />
+        </TableRow>
+
+    </TableLayout>
+
+</RelativeLayout>
