@@ -6,5 +6,8 @@
     <color name="colorSecondaryDark">#303030</color>
     <color name="colorAccent">#D55353</color>
     <color name="colorIcon">#D55353</color>
+    <color name="grayButton">#C9C9C9</color>
+    <color name="greenSuccess">#2F7B06</color>
+    <color name="textGray">#888888</color>
 </resources>
 

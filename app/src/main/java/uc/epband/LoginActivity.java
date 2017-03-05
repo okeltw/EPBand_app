@@ -340,7 +340,7 @@ public class LoginActivity extends AppCompatActivity implements LoaderCallbacks<
                 //startActivityForResult(intent,2);
                 FragmentManager fragmentManager = getFragmentManager();
                 //FragmentTransaction fragmentTransaction = fragmentManager.beginTransaction();
-                //bluetooth_pairing fragment = new bluetooth_pairing();
+
                 //fragmentTransaction.add(R.id.fragment, fragment);
                 //fragmentTransaction.commit();
                 finish();

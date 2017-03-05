@@ -50,7 +50,7 @@ public class ProfileActivity extends AppCompatActivity {
                 int age = Integer.parseInt(Age.getText().toString());
                 int height = Integer.parseInt(Height.getText().toString());
                 int weight = Integer.parseInt(Weight.getText().toString());
-                boolean gender = Gender.isActivated();
+                boolean gender = Gender.isChecked();
 
                 SetProfile("test", height, weight, age, gender);
                 finish();
@@ -75,7 +75,7 @@ public class ProfileActivity extends AppCompatActivity {
 
         if(height < 58) height = 58;
         else if(height > 96) height = 70;
-        int ArmLength = (height*9/20); //assume each arm is 90% the height
+        int ArmLength = (height*4/10); //assume each arm is 40% the height
 
         SharedPreferences Settings = getSharedPreferences(filename,MODE_PRIVATE);
         SharedPreferences.Editor editor = Settings.edit();

@@ -1,13 +1,23 @@
 package uc.epband;
 
+import android.Manifest;
 import android.app.FragmentManager;
 import android.app.FragmentTransaction;
+import android.bluetooth.BluetoothAdapter;
+import android.bluetooth.BluetoothDevice;
+import android.bluetooth.BluetoothManager;
+import android.bluetooth.BluetoothProfile;
+import android.content.BroadcastReceiver;
+import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.graphics.Color;
 import android.os.Bundle;
 import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.Snackbar;
+import android.support.v4.app.ActivityCompat;
+import android.util.Log;
 import android.view.View;
 import android.support.design.widget.NavigationView;
 import android.support.v4.view.GravityCompat;
@@ -17,7 +27,9 @@ import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.widget.ArrayAdapter;
 
+import com.github.mikephil.charting.charts.BarChart;
 import com.github.mikephil.charting.charts.LineChart;
 import com.github.mikephil.charting.charts.PieChart;
 import com.github.mikephil.charting.components.Description;
@@ -37,8 +49,18 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.lang.Math;
+import java.util.concurrent.ThreadLocalRandom;
+
 public class MenuScreen extends AppCompatActivity
         implements NavigationView.OnNavigationItemSelectedListener {
+
+    static float anaerobic = 0.8f;
+    static float aerobic = 0.7f;
+    static float rest = 0.6f;
+
+    private ArrayList<String> mDeviceList = new ArrayList<String>();
+    private BluetoothAdapter mBluetoothAdapter;
+    private BluetoothManager mBluetoothManager;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -55,7 +77,47 @@ public class MenuScreen extends AppCompatActivity
 
         NavigationView navigationView = (NavigationView) findViewById(R.id.nav_view);
         navigationView.setNavigationItemSelectedListener(this);
+
+        //GET NECESSARY PERMISSIONS
+        int MY_PERMISSIONS_REQUEST_ACCESS_COARSE_LOCATION = 1;
+        ActivityCompat.requestPermissions(this,
+                new String[]{Manifest.permission.ACCESS_COARSE_LOCATION},
+                MY_PERMISSIONS_REQUEST_ACCESS_COARSE_LOCATION);
+
+        //BLUETOOTH
+        mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
+        mBluetoothAdapter.enable();
+        System.out.println("Bluetooth enabled: " + mBluetoothAdapter.getName() + " " + mBluetoothAdapter.isEnabled());
+        mBluetoothAdapter.startDiscovery();
+        System.out.println("Is discovering: " + mBluetoothAdapter.isDiscovering());
+        IntentFilter filter = new IntentFilter(BluetoothDevice.ACTION_FOUND);
+        registerReceiver(mReceiver, filter);
+        System.out.println("Created App");
     }
+
+    @Override
+    protected void onDestroy() {
+        unregisterReceiver(mReceiver);
+        System.out.println("Destroyed EP Band");
+        super.onDestroy();
+    }
+
+    // Create a BroadcastReceiver for ACTION_FOUND.
+    private final BroadcastReceiver mReceiver = new BroadcastReceiver() {
+        public void onReceive(Context context, Intent intent) {
+            String action = intent.getAction();
+            //System.out.println("mReceiever intent.getAction() = " + action);
+            //System.out.println("BluetoothDevice.ACTION_FOUND = " + BluetoothDevice.ACTION_FOUND);
+            if (BluetoothDevice.ACTION_FOUND.equals(action)) {
+                // Discovery has found a device. Get the BluetoothDevice
+                // object and its info from the Intent.
+                BluetoothDevice device = intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE);
+                String deviceName = device.getName();
+                String deviceHardwareAddress = device.getAddress(); // MAC address
+                System.out.println("Device: " + deviceName + " " + deviceHardwareAddress);
+            }
+        }
+    };
 
     @Override
     public void onBackPressed() {
@@ -88,40 +150,46 @@ public class MenuScreen extends AppCompatActivity
         return super.onOptionsItemSelected(item);
     }
 
-    @SuppressWarnings("StatementWithEmptyBody")
     @Override
     public boolean onNavigationItemSelected(MenuItem item) {
         // Handle navigation view item clicks here.
         int id = item.getItemId();
+        hideAllCharts();
         switch(id){
             case R.id.nav_device:
                 System.out.println("Menu: Device Setup");
-                AppendFile("TestWorkout", "__A__");
-                ReadFile("TestWorkout");
-                CreateFile("HELLO WORLD");
-                ReadFile("TestWorkout");
+                if(!mBluetoothAdapter.isDiscovering()){
+                    mBluetoothAdapter.startDiscovery();
+                    System.out.println("Start Discovery");
+                }
+                else System.out.println("Still discovering");
+                //AppendFile("TestWorkout", "__A__");
+                //ReadFile("TestWorkout");
+                //CreateFile("HELLO WORLD");
+                //ReadFile("TestWorkout");
+                //ListFiles();
+
                 break;
             case R.id.nav_edit_workout:
                 System.out.println("Menu: Workout Templates");
-                CreateFile("TestWorkout");
-                ReadFile("TestWorkout");
+                //CreateFile("TestWorkout");
+                //ReadFile("TestWorkout");
                 break;
             case R.id.nav_profile:
                 System.out.println("Menu: Profile");
                 Intent intent = new Intent(MenuScreen.this, ProfileActivity.class);
                 startActivity(intent);
+                PrintProfile();
                 break;
             case R.id.nav_review:
                 System.out.println("Menu: View Analysis");
-                //PieChart chart = (PieChart) findViewById(R.id.chart);
-                CreateHeartRateSummary((PieChart) findViewById(R.id.chart), 25.0f, 33.0f, 42.0f, 10.0f);
-                System.out.println("New Chart");
+                List<Entry> entries = TestLineData();
+                float[] counts = AnalyzeHeartRateData(entries, 220);
+                CreateHeartRateSummary((PieChart) findViewById(R.id.piechart), counts[0], counts[1], counts[2], counts[3]);
                 break;
             case R.id.nav_workout_start:
                 System.out.println("Menu: Start Workout");
-                PrintProfile();
-                //CreateHeartRateSummary((PieChart) findViewById(R.id.chart), 5.0f, 15.0f, 40.0f, 40.0f);
-                //ListFiles();
+                TestLineChart();
                 break;
         }
 
@@ -130,7 +198,101 @@ public class MenuScreen extends AppCompatActivity
         return true;
     }
 
+    private void hideAllCharts(){
+        ((PieChart) findViewById(R.id.piechart)).setVisibility(View.INVISIBLE);
+        ((BarChart) findViewById(R.id.barchart)).setVisibility(View.INVISIBLE);
+        ((LineChart) findViewById(R.id.linechart)).setVisibility(View.INVISIBLE);
+    }
+
+    public void TestLineChart(){
+        List<Entry> entries = TestLineData();
+        LineChart chart = (LineChart) findViewById(R.id.linechart);
+        CreateLineChart(chart, entries);
+    }
+
+    private float[] AnalyzeHeartRateData(List<Entry> entries, int MHR){
+
+        float Y;
+        float[] counts = {0f, 0f, 0f, 0f};
+        Entry entry;
+        for(int i = 0; i < entries.size(); i++){
+            entry = entries.get(i);
+            Y = entry.getY();
+            if( Y < rest*MHR){
+                counts[0]++;
+            }
+            else if( Y < aerobic*MHR){
+                counts[1]++;
+            }
+            else if( Y < anaerobic*MHR){
+                counts[2]++;
+            }
+            else{
+                counts[3]++;
+            }
+        }
+        return counts;
+    }
+
+    private List<Entry> TestLineData(){
+        List<Entry> entries = new ArrayList<Entry>();
+        float Y;
+        int X = 0;
+        int MHR = 220;
+
+        for (; X < 200; X++){
+            Y = (float)(0.5*MHR + (X % 5));
+            entries.add(new Entry(X,Y));
+        }
+        for (; X < 650; X++){
+            Y = (float)(0.6*MHR + (X % 5));
+            entries.add(new Entry(X,Y));
+        }
+        for (; X < 900; X++){
+            Y = (float)(0.7*MHR + (X % 5));
+            entries.add(new Entry(X,Y));
+        }
+        for (; X < 1000; X++){
+            Y = (float)(0.8*MHR + (X % 5));
+            entries.add(new Entry(X,Y));
+        }
+        return entries;
+    }
+
+    public void CreateLineChart(LineChart chart, List<Entry> entries){
+        // VISIBILITY ON
+        chart.setVisibility(View.VISIBLE);
+
+        // CREATE DATA
+        LineDataSet dataSet = new LineDataSet(entries, "Line Graph");
+
+        // DATA POINT STYLE SETTINGS
+        dataSet.setColor(Color.WHITE);
+        dataSet.setCircleColor(Color.RED);
+        dataSet.setCircleColorHole(Color.BLACK);
+        dataSet.setCircleHoleRadius(1f);
+        dataSet.setCircleRadius(2f);
+
+        // CHART STYLE SETTINGS
+        chart.setVisibility(View.VISIBLE);
+        chart.getXAxis().setEnabled(true);
+        chart.getAxisLeft().setAxisMaximum(220f);
+        chart.getAxisLeft().setEnabled(false);
+
+        // LEGEND SETTINGS
+        Legend legend = chart.getLegend();
+        legend.setEnabled(false);
+
+        // REFRESH
+        LineData lineData = new LineData(dataSet);
+        chart.setData(lineData);
+        chart.invalidate();
+    }
+
     public void CreateHeartRateSummary(PieChart chart, float unread, float rest, float aerobic, float anaerobic){
+        // VISIBILITY ON
+        chart.setVisibility(View.VISIBLE);
+
         // CREATE DATA
         List<PieEntry> entries = new ArrayList<>();
         entries.add(new PieEntry(unread, "Unread"));
@@ -175,6 +337,18 @@ public class MenuScreen extends AppCompatActivity
         chart.invalidate(); // refresh
     }
 
+    private int[] GetProfile(String filename){
+        SharedPreferences Settings = getSharedPreferences(filename,MODE_PRIVATE);
+        int[] profile = new int[6];
+        profile[0] = Settings.getInt("height", 70);
+        profile[1] = Settings.getInt("weight", 170);
+        profile[2] = Settings.getInt("age", 20);
+        profile[3] = Settings.getInt("gender", 0);
+        profile[4] = Settings.getInt("MHR", 200);
+        profile[5] = Settings.getInt("arm", 32);
+        return profile;
+    }
+
     public void PrintProfile(){
         int[] profile = GetProfile("test");
         System.out.println("height: " + profile[0]);
@@ -183,20 +357,8 @@ public class MenuScreen extends AppCompatActivity
         System.out.println("weight: " + profile[1]);
         System.out.println("age: " + profile[2]);
         System.out.println("gender: " + profile[3]);
-    }
-
-    public void CreateLineChart(){
-        LineChart chart = (LineChart) findViewById(R.id.chart);
-        List<Entry> entries = new ArrayList<Entry>();
-        float Y;
-        for (int X = 0; X < 360*100; X++){
-            Y = ((float) Math.cos(Math.toRadians(X)));
-            entries.add(new Entry(X,Y));
-        }
-        LineDataSet dataSet = new LineDataSet(entries, "Line Graph");
-        LineData lineData = new LineData(dataSet);
-        chart.setData(lineData);
-        chart.invalidate(); // refresh
+        System.out.println("MHR: " + profile[4]);
+        System.out.println("arm: " + profile[5]);
     }
 
     public String NewFilename(String WorkoutName){
@@ -209,18 +371,6 @@ public class MenuScreen extends AppCompatActivity
             }
         }
         return filename;
-    }
-
-    public int[] GetProfile(String filename){
-        SharedPreferences Settings = getSharedPreferences(filename,MODE_PRIVATE);
-        int[] profile = new int[6];
-        profile[0] = Settings.getInt("height", 70);
-        profile[1] = Settings.getInt("weight", 170);
-        profile[2] = Settings.getInt("age", 20);
-        profile[3] = Settings.getInt("gender", 0);
-        profile[4] = Settings.getInt("MHR", 200);
-        profile[5] = Settings.getInt("arm", 32);
-        return profile;
     }
 
     public void ListFiles(){

@@ -27,7 +27,21 @@
     <!-- <include layout="@layout/content_profile" /> -->
 
     <com.github.mikephil.charting.charts.PieChart
-        android:id="@+id/chart"
+        android:id="@+id/piechart"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_marginTop="?attr/actionBarSize"
+        android:layout_marginBottom="@dimen/fab_margin"/>
+
+    <com.github.mikephil.charting.charts.LineChart
+        android:id="@+id/linechart"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_marginTop="?attr/actionBarSize"
+        android:layout_marginBottom="@dimen/fab_margin"/>
+
+    <com.github.mikephil.charting.charts.BarChart
+        android:id="@+id/barchart"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:layout_marginTop="?attr/actionBarSize"
