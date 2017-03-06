@@ -7,6 +7,7 @@ import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothManager;
 import android.bluetooth.BluetoothProfile;
+import android.bluetooth.BluetoothSocket;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
@@ -14,6 +15,7 @@ import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.graphics.Color;
 import android.os.Bundle;
+import android.os.ParcelUuid;
 import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.Snackbar;
 import android.support.v4.app.ActivityCompat;
@@ -44,11 +46,17 @@ import com.github.mikephil.charting.data.PieEntry;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.lang.reflect.Method;
 import java.text.DateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.lang.Math;
+import java.util.Set;
+import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
 
 public class MenuScreen extends AppCompatActivity
@@ -57,6 +65,13 @@ public class MenuScreen extends AppCompatActivity
     static float anaerobic = 0.8f;
     static float aerobic = 0.7f;
     static float rest = 0.6f;
+
+    private String mUUID = "1e0ca4ea-299d-4335-93eb-27fcfe7fa848";
+
+    public String desiredDeviceName = "Andrew's iPhone";
+
+    private OutputStream outputStream;
+    private InputStream inStream;
 
     private ArrayList<String> mDeviceList = new ArrayList<String>();
     private BluetoothAdapter mBluetoothAdapter;
@@ -87,27 +102,34 @@ public class MenuScreen extends AppCompatActivity
         //BLUETOOTH
         mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
         mBluetoothAdapter.enable();
+
         System.out.println("Bluetooth enabled: " + mBluetoothAdapter.getName() + " " + mBluetoothAdapter.isEnabled());
         mBluetoothAdapter.startDiscovery();
         System.out.println("Is discovering: " + mBluetoothAdapter.isDiscovering());
-        IntentFilter filter = new IntentFilter(BluetoothDevice.ACTION_FOUND);
-        registerReceiver(mReceiver, filter);
+
+        IntentFilter filter_search = new IntentFilter(BluetoothDevice.ACTION_FOUND);
+        registerReceiver(mReceiverBTDiscover, filter_search);
+
+        IntentFilter filter_connect = new IntentFilter(BluetoothDevice.ACTION_BOND_STATE_CHANGED);
+        registerReceiver(mReceiverBTConnect, filter_connect);
+
+        hideAllCharts();
         System.out.println("Created App");
     }
 
     @Override
     protected void onDestroy() {
-        unregisterReceiver(mReceiver);
+        unregisterReceiver(mReceiverBTDiscover);
+        unregisterReceiver(mReceiverBTConnect);
         System.out.println("Destroyed EP Band");
         super.onDestroy();
     }
 
     // Create a BroadcastReceiver for ACTION_FOUND.
-    private final BroadcastReceiver mReceiver = new BroadcastReceiver() {
+    private final BroadcastReceiver mReceiverBTDiscover = new BroadcastReceiver() {
+        @Override
         public void onReceive(Context context, Intent intent) {
             String action = intent.getAction();
-            //System.out.println("mReceiever intent.getAction() = " + action);
-            //System.out.println("BluetoothDevice.ACTION_FOUND = " + BluetoothDevice.ACTION_FOUND);
             if (BluetoothDevice.ACTION_FOUND.equals(action)) {
                 // Discovery has found a device. Get the BluetoothDevice
                 // object and its info from the Intent.
@@ -115,9 +137,86 @@ public class MenuScreen extends AppCompatActivity
                 String deviceName = device.getName();
                 String deviceHardwareAddress = device.getAddress(); // MAC address
                 System.out.println("Device: " + deviceName + " " + deviceHardwareAddress);
+
+                try{
+                    if(deviceName.equals(desiredDeviceName)){
+                        device.createBond();
+                        System.out.println("Created bond " + mBluetoothAdapter.getBondedDevices());
+                    }
+                }catch(NullPointerException ex){
+                }
             }
         }
     };
+
+    private final BroadcastReceiver mReceiverBTConnect = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            String action = intent.getAction();
+            System.out.println("mReceiverBTConnect");
+            if(BluetoothDevice.ACTION_BOND_STATE_CHANGED.equals(action)){
+                BluetoothDevice device = intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE);
+                String deviceName = device.getName();
+                String deviceHardwareAddress = device.getAddress();
+                System.out.println("Bond State Device: " + deviceName + " " + deviceHardwareAddress);
+                System.out.println(BluetoothDevice.EXTRA_BOND_STATE);
+            }
+        }
+    };
+
+    private void testBluetoothStream(){
+        mBluetoothAdapter.cancelDiscovery();
+        System.out.println("Bluetooth state is: " + mBluetoothAdapter.getState());
+        BluetoothDevice device = null;
+        Set<BluetoothDevice> BondedDevices = mBluetoothAdapter.getBondedDevices();
+        for(BluetoothDevice d: BondedDevices){
+            if(d.getName().equals(desiredDeviceName)) device = d;
+        }
+        if(device.equals(null)){
+            System.out.println("Couldn't find device to test");
+            return;
+        }
+        else {
+            ParcelUuid[] uuids = device.getUuids();
+            //device.fetchUuidsWithSdp()
+            BluetoothSocket socket;
+            try {
+                System.out.println("Attempt uuids");
+                socket = device.createInsecureRfcommSocketToServiceRecord(uuids[0].getUuid());
+                System.out.println("Connect to socket... using: " + uuids[0]);
+                System.out.println(socket.getRemoteDevice());
+                socket.connect();
+
+                System.out.println("Open streams");
+                outputStream = socket.getOutputStream();
+                inStream = socket.getInputStream();
+                System.out.println("Sending string to BT device");
+                sendStringBT("Hello world");
+            } catch (IOException ex) {
+                System.out.println("God damn IO Exception" + ex.getLocalizedMessage());
+                try {
+                    Method m = device.getClass().getMethod("createInsecureRfcommSocket", new Class[]{int.class});
+                    socket = (BluetoothSocket) m.invoke(device, Integer.valueOf(1)); // 1==RFCOMM channel code
+                    socket.connect();
+                    System.out.println("success?");
+                    System.out.println("Open streams");
+                    outputStream = socket.getOutputStream();
+                    inStream = socket.getInputStream();
+                    System.out.println("Sending string to BT device");
+                    sendStringBT("Hello world");
+                }catch(Exception ex2){
+                    System.out.println("New method did not works for " + device.getName());
+                }
+            } catch (NullPointerException ex) {
+                System.out.println("uuids: " + uuids);
+            }
+        }
+    }
+
+    private void sendStringBT(String message) throws IOException{
+        System.out.println("Sending string to BT device");
+        outputStream.write(message.getBytes());
+    }
 
     @Override
     public void onBackPressed() {
@@ -163,6 +262,12 @@ public class MenuScreen extends AppCompatActivity
                     System.out.println("Start Discovery");
                 }
                 else System.out.println("Still discovering");
+                try{
+                    sendStringBT("Hello world");
+                }catch(IOException ex){
+                    System.out.println("IOException");
+                }
+                //testBluetoothStream();
                 //AppendFile("TestWorkout", "__A__");
                 //ReadFile("TestWorkout");
                 //CreateFile("HELLO WORLD");
@@ -172,6 +277,7 @@ public class MenuScreen extends AppCompatActivity
                 break;
             case R.id.nav_edit_workout:
                 System.out.println("Menu: Workout Templates");
+                testBluetoothStream();
                 //CreateFile("TestWorkout");
                 //ReadFile("TestWorkout");
                 break;
@@ -204,7 +310,7 @@ public class MenuScreen extends AppCompatActivity
         ((LineChart) findViewById(R.id.linechart)).setVisibility(View.INVISIBLE);
     }
 
-    public void TestLineChart(){
+    private void TestLineChart(){
         List<Entry> entries = TestLineData();
         LineChart chart = (LineChart) findViewById(R.id.linechart);
         CreateLineChart(chart, entries);

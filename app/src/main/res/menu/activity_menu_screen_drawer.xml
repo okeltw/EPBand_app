@@ -6,10 +6,12 @@
             android:id="@+id/nav_device"
             android:icon="@drawable/ic_bluetooth_24dp"
             android:title="Device Setup" />
+
         <item
             android:id="@+id/nav_edit_workout"
             android:icon="@drawable/ic_note_add_24dp"
             android:title="Workout Templates" />
+
         <item
             android:id="@+id/nav_profile"
             android:icon="@drawable/ic_profile_24dp"
