@@ -49,6 +49,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.io.PrintStream;
 import java.lang.reflect.Method;
 import java.text.DateFormat;
 import java.util.ArrayList;
@@ -70,6 +71,7 @@ public class MenuScreen extends AppCompatActivity
 
     public String desiredDeviceName = "Andrew's iPhone";
 
+    private BluetoothSocket socket;
     private OutputStream outputStream;
     private InputStream inStream;
 
@@ -164,58 +166,112 @@ public class MenuScreen extends AppCompatActivity
         }
     };
 
-    private void testBluetoothStream(){
-        mBluetoothAdapter.cancelDiscovery();
-        System.out.println("Bluetooth state is: " + mBluetoothAdapter.getState());
+    private boolean disconnectSocket(){
+        closeStreams();
+        if(socket.isConnected()) {
+            try {
+                socket.close();
+                return true;
+            }
+            catch (IOException ex){
+                System.out.println("Could not close socket");
+                return false;
+            }
+        }
+        else return true;
+    }
+
+    private boolean connectSocket(BluetoothDevice device){
+        if(device.equals(null)){
+            System.out.println("Device is null");
+            return false;
+        }
+        else{
+            //No longer need to waste resources trying to discover devices
+            if(mBluetoothAdapter.isDiscovering()) mBluetoothAdapter.cancelDiscovery();
+            ParcelUuid[] uuids = device.getUuids();
+            //attempt normal connection
+            try {
+                socket = device.createInsecureRfcommSocketToServiceRecord(uuids[0].getUuid());
+                if(!socket.isConnected()){
+                    socket.connect();
+                    return true;
+                }
+                else return false;
+            } catch (IOException ex) {
+                //If connection fails, use the workaround for Android 4.2 and above
+                System.out.println("Attempting alternate bluetooth socket connection");
+                try {
+                    Method m = device.getClass().getMethod("createInsecureRfcommSocket", new Class[]{int.class});
+                    socket = (BluetoothSocket) m.invoke(device, Integer.valueOf(1)); // 1==RFCOMM channel code
+                    socket.connect();
+                    return true;
+                }catch(Exception ex2){
+                    //All attempts failed
+                    System.out.println("Completely unable to open bluetooth socket");
+                    return false;
+                }
+            } catch (NullPointerException ex) {
+                //Device doesn't properly offer a UUID
+                System.out.println("No uuids provided by device");
+                return false;
+            }
+        }
+    }
+
+    private boolean openStreams(){
+        if(socket.isConnected()) {
+            try {
+                outputStream = socket.getOutputStream();
+                System.out.println("Output Stream Open");
+
+                inStream = socket.getInputStream();
+                System.out.println("Input Stream Open");
+                return true;
+            } catch (IOException ex) {
+                System.out.println("Unable to open both streams");
+                closeStreams();
+                return false;
+            }
+        } else return false;
+    }
+
+    private boolean closeStreams(){
+        boolean result = true;
+        try {
+            outputStream.close();
+        } catch(IOException ex2){
+            System.out.println("Could not close outputStream");
+            result = false;
+        }
+        try {
+            inStream.close();
+        }catch(IOException ex2){
+            System.out.println("Could not close inStream");
+            result = false;
+        }
+        return result;
+    }
+
+    private BluetoothDevice matchBluetoothDevice(){
         BluetoothDevice device = null;
         Set<BluetoothDevice> BondedDevices = mBluetoothAdapter.getBondedDevices();
         for(BluetoothDevice d: BondedDevices){
             if(d.getName().equals(desiredDeviceName)) device = d;
         }
-        if(device.equals(null)){
-            System.out.println("Couldn't find device to test");
-            return;
-        }
-        else {
-            ParcelUuid[] uuids = device.getUuids();
-            //device.fetchUuidsWithSdp()
-            BluetoothSocket socket;
-            try {
-                System.out.println("Attempt uuids");
-                socket = device.createInsecureRfcommSocketToServiceRecord(uuids[0].getUuid());
-                System.out.println("Connect to socket... using: " + uuids[0]);
-                System.out.println(socket.getRemoteDevice());
-                socket.connect();
-
-                System.out.println("Open streams");
-                outputStream = socket.getOutputStream();
-                inStream = socket.getInputStream();
-                System.out.println("Sending string to BT device");
-                sendStringBT("Hello world");
-            } catch (IOException ex) {
-                System.out.println("God damn IO Exception" + ex.getLocalizedMessage());
-                try {
-                    Method m = device.getClass().getMethod("createInsecureRfcommSocket", new Class[]{int.class});
-                    socket = (BluetoothSocket) m.invoke(device, Integer.valueOf(1)); // 1==RFCOMM channel code
-                    socket.connect();
-                    System.out.println("success?");
-                    System.out.println("Open streams");
-                    outputStream = socket.getOutputStream();
-                    inStream = socket.getInputStream();
-                    System.out.println("Sending string to BT device");
-                    sendStringBT("Hello world");
-                }catch(Exception ex2){
-                    System.out.println("New method did not works for " + device.getName());
-                }
-            } catch (NullPointerException ex) {
-                System.out.println("uuids: " + uuids);
-            }
-        }
+        return device;
     }
 
-    private void sendStringBT(String message) throws IOException{
-        System.out.println("Sending string to BT device");
-        outputStream.write(message.getBytes());
+    private boolean sendStringBT(String message){
+        try {
+            outputStream.write(message.getBytes());
+            System.out.println("Message write to outputStream succeeded");
+            return true;
+        }
+        catch (IOException ex){
+            System.out.println("Message write to outputStream failed");
+            return false;
+        }
     }
 
     @Override
@@ -262,12 +318,10 @@ public class MenuScreen extends AppCompatActivity
                     System.out.println("Start Discovery");
                 }
                 else System.out.println("Still discovering");
-                try{
-                    sendStringBT("Hello world");
-                }catch(IOException ex){
-                    System.out.println("IOException");
+                if(connectSocket(matchBluetoothDevice())){
+                    openStreams();
                 }
-                //testBluetoothStream();
+
                 //AppendFile("TestWorkout", "__A__");
                 //ReadFile("TestWorkout");
                 //CreateFile("HELLO WORLD");
@@ -277,7 +331,7 @@ public class MenuScreen extends AppCompatActivity
                 break;
             case R.id.nav_edit_workout:
                 System.out.println("Menu: Workout Templates");
-                testBluetoothStream();
+                sendStringBT("Hello World");
                 //CreateFile("TestWorkout");
                 //ReadFile("TestWorkout");
                 break;
