@@ -19,6 +19,7 @@ import android.os.ParcelUuid;
 import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.Snackbar;
 import android.support.v4.app.ActivityCompat;
+import android.text.format.DateUtils;
 import android.util.Log;
 import android.view.View;
 import android.support.design.widget.NavigationView;
@@ -53,6 +54,7 @@ import java.io.OutputStream;
 import java.io.PrintStream;
 import java.lang.reflect.Method;
 import java.text.DateFormat;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
@@ -60,6 +62,7 @@ import java.lang.Math;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
+import org.json.*;
 
 public class MenuScreen extends AppCompatActivity
         implements NavigationView.OnNavigationItemSelectedListener {
@@ -178,14 +181,19 @@ public class MenuScreen extends AppCompatActivity
                             System.out.println("Connecting");
                             if (connectSocket(matchBluetoothDevice())) {
                                 if(openStreams()){
-                                    Toast.makeText(MenuScreen.this, "CONNECTED", Toast.LENGTH_LONG).show();
+                                    //Toast.makeText(MenuScreen.this, "CONNECTED", Toast.LENGTH_LONG).show();
+                                    Snackbar.make(findViewById(R.id.nav_view), "CONNECTED", Snackbar.LENGTH_SHORT).show();
                                     mConnected = true;
                                 }
                                 else{
-                                    Toast.makeText(MenuScreen.this, "CONNECTION ERROR", Toast.LENGTH_LONG).show();
+                                    //Toast.makeText(MenuScreen.this, "CONNECTION ERROR", Toast.LENGTH_LONG).show();
+                                    Snackbar.make(findViewById(R.id.nav_view), "CONNECTION ERROR", Snackbar.LENGTH_SHORT).show();
                                 }
                             }
-                            else Toast.makeText(MenuScreen.this, "FAILED CONNECTION", Toast.LENGTH_LONG).show();
+                            else{
+                                //Toast.makeText(MenuScreen.this, "FAILED CONNECTION", Toast.LENGTH_LONG).show();
+                                Snackbar.make(findViewById(R.id.nav_view), "FAILED CONNECTION", Snackbar.LENGTH_SHORT).show();
+                            }
                         }
                     })
                     .setActionTextColor(getResources().getColor(R.color.greenSuccess))
@@ -193,7 +201,8 @@ public class MenuScreen extends AppCompatActivity
         }
         else{
             if(!mBluetoothAdapter.isDiscovering()){
-                Toast.makeText(MenuScreen.this, "Searching for EP Band", Toast.LENGTH_LONG).show();
+                //Toast.makeText(MenuScreen.this, "Searching for EP Band", Toast.LENGTH_LONG).show();
+                Snackbar.make(findViewById(R.id.nav_view), "SEARCHING FOR EP BAND", Snackbar.LENGTH_SHORT).show();
                 mBluetoothAdapter.startDiscovery();
                 System.out.println("Start Discovery");
             }
@@ -209,7 +218,8 @@ public class MenuScreen extends AppCompatActivity
                         System.out.println("Disconnecting");
                         if(disconnectSocket()){
                             socket = null;
-                            Toast.makeText(MenuScreen.this, "DISCONNECTED", Toast.LENGTH_LONG).show();
+                            //Toast.makeText(MenuScreen.this, "DISCONNECTED", Toast.LENGTH_LONG).show();
+                            Snackbar.make(findViewById(R.id.nav_view), "DISCONNECTED", Snackbar.LENGTH_SHORT).show();
                             mConnected = false;
                         }
                     }
@@ -341,7 +351,7 @@ public class MenuScreen extends AppCompatActivity
                 byte[] buffer = new byte[size];
                 inStream.read(buffer);
                 System.out.println("Read " + size + " bytes");
-                return buffer.toString();
+                return new String(buffer);
             }
             else{
                 System.out.println("No bytes read");
@@ -359,7 +369,7 @@ public class MenuScreen extends AppCompatActivity
         if (drawer.isDrawerOpen(GravityCompat.START)) {
             drawer.closeDrawer(GravityCompat.START);
         } else {
-            super.onBackPressed();
+            //super.onBackPressed();
         }
     }
 
@@ -412,10 +422,20 @@ public class MenuScreen extends AppCompatActivity
                 break;
             case R.id.nav_edit_workout:
                 System.out.println("Menu: Workout Templates");
-                bluetoothWrite("Hello World");
-                bluetoothRead();
-                //CreateFile("TestWorkout");
-                //ReadFile("TestWorkout");
+                //bluetoothWrite("Hello World");
+                //bluetoothRead();
+                String filename = "JOBJECT";
+                CreateFile(filename);
+                JSONObject jObj = testJSON();
+                AppendFile(filename,jObj.toString());
+                String content = ReadFile(filename);
+                try {
+                    jObj = new JSONObject(content);
+                    System.out.println("File contained:\n"+jObj);
+                }catch(Exception ex){
+                    System.out.println("Couldn't read JSON");
+                }
+                ListFiles();
                 break;
             case R.id.nav_profile:
                 System.out.println("Menu: Profile");
@@ -434,7 +454,7 @@ public class MenuScreen extends AppCompatActivity
                 TestLineChart();
                 break;
         }
-
+        //testJSON();
         DrawerLayout drawer = (DrawerLayout) findViewById(R.id.drawer_layout);
         drawer.closeDrawer(GravityCompat.START);
         return true;
@@ -630,10 +650,8 @@ public class MenuScreen extends AppCompatActivity
 
     public void CreateFile(String filename){
         try{
-            String msg = "Output File";
             FileOutputStream f = openFileOutput(filename, MODE_PRIVATE);
-            f.write(msg.getBytes());
-            System.out.println("Created output file with: " + msg.getBytes());
+            System.out.println("Created output file");
             f.close();
         } catch (Exception ex){
             System.out.println("Well fuck... Can't open files");
@@ -650,16 +668,55 @@ public class MenuScreen extends AppCompatActivity
         }
     }
 
-    public void ReadFile(String filename){
+    public String ReadFile(String filename){
         try{
             FileInputStream f = openFileInput(filename);
             int size = f.available();
             byte[] content = new byte[size];
             f.read(content);
-            System.out.println("File contains " + size + " bytes :\n" + new String(content));
+            String contents = new String(content);
+            System.out.println("File contains " + size + " bytes :\n" + contents);
             f.close();
+            return contents;
         } catch(Exception ex){
             System.out.println("Well fuck... Can't read from files");
+            return null;
+        }
+    }
+
+    public JSONObject readWorkoutFile(String filename){
+        try{
+            FileInputStream f = openFileInput(filename);
+            int size = f.available();
+            byte[] content = new byte[size];
+            f.read(content);
+            f.close();
+            String jString = new String(content);
+            JSONObject jObject = new JSONObject(jString);
+            return jObject;
+        } catch(Exception ex){
+            System.out.println("Couldn't get JSON Object from file");
+            return new JSONObject();
+        }
+    }
+
+    private JSONObject testJSON(){
+        JSONObject jObject = new JSONObject();
+        JSONArray jArray = new JSONArray();
+        for(int i = 1; i < 100; i++){
+            jArray.put(i);
+        }
+        try{
+            DateFormat dateFormat = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss");
+            Date date = new Date();
+            String dateString = dateFormat.format(date);
+            jObject.put("Array", jArray);
+            jObject.put("date", dateString);
+            System.out.println(jObject.toString());
+            return  jObject;
+        }
+        catch (Exception ex){
+            return new JSONObject();
         }
     }
 

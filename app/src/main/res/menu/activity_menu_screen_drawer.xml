@@ -5,12 +5,13 @@
         <item
             android:id="@+id/nav_device"
             android:icon="@drawable/ic_bluetooth_24dp"
-            android:title="Device Setup" />
+            android:title="Bluetooth Connection" />
 
         <item
             android:id="@+id/nav_edit_workout"
             android:icon="@drawable/ic_note_add_24dp"
-            android:title="Workout Templates" />
+            android:title="Workout Templates"
+            android:visible="true"/>
 
         <item
             android:id="@+id/nav_profile"
