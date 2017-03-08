@@ -30,6 +30,7 @@ import android.support.v7.widget.Toolbar;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.widget.ArrayAdapter;
+import android.widget.Toast;
 
 import com.github.mikephil.charting.charts.BarChart;
 import com.github.mikephil.charting.charts.LineChart;
@@ -71,9 +72,9 @@ public class MenuScreen extends AppCompatActivity
 
     public String desiredDeviceName = "Andrew's iPhone";
 
-    private BluetoothSocket socket;
-    private OutputStream outputStream;
-    private InputStream inStream;
+    private BluetoothSocket socket = null;
+    private OutputStream outputStream = null;
+    private InputStream inStream = null;
 
     private ArrayList<String> mDeviceList = new ArrayList<String>();
     private BluetoothAdapter mBluetoothAdapter;
@@ -166,11 +167,61 @@ public class MenuScreen extends AppCompatActivity
         }
     };
 
+    private void establishBluetooth(){
+        BluetoothDevice device = matchBluetoothDevice();
+        if(!(device == null)) {
+            Snackbar.make(findViewById(R.id.nav_view), "EP Band", Snackbar.LENGTH_INDEFINITE)
+                    .setAction("CONNECT", new View.OnClickListener() {
+                        @Override
+                        public void onClick(View view) {
+                            System.out.println("Connecting");
+                            if (connectSocket(matchBluetoothDevice())) {
+                                if(openStreams()){
+                                    Toast.makeText(MenuScreen.this, "CONNECTED", Toast.LENGTH_LONG).show();
+                                }
+                                else{
+                                    Toast.makeText(MenuScreen.this, "CONNECTION ERROR", Toast.LENGTH_LONG).show();
+                                }
+                            }
+                            else Toast.makeText(MenuScreen.this, "FAILED CONNECTION", Toast.LENGTH_LONG).show();
+                        }
+                    })
+                    .setActionTextColor(getResources().getColor(R.color.greenSuccess))
+                    .show();
+        }
+        else{
+            if(!mBluetoothAdapter.isDiscovering()){
+                Toast.makeText(MenuScreen.this, "Searching for EP Band", Toast.LENGTH_LONG).show();
+                mBluetoothAdapter.startDiscovery();
+                System.out.println("Start Discovery");
+            }
+            else System.out.println("Still discovering");
+        }
+    }
+
+    private void endBluetooth(){
+        Snackbar.make(findViewById(R.id.nav_view), "EP Band", Snackbar.LENGTH_LONG)
+                .setAction("DISCONNECT", new View.OnClickListener() {
+                    @Override
+                    public void onClick(View view) {
+                        System.out.println("Disconnecting");
+                        if(disconnectSocket()){
+                            socket = null;
+                            Toast.makeText(MenuScreen.this, "DISCONNECTED", Toast.LENGTH_LONG).show();
+                        }
+                    }
+                })
+                .setActionTextColor(getResources().getColor(R.color.colorAccent))
+                .show();
+
+    }
+
     private boolean disconnectSocket(){
         closeStreams();
         if(socket.isConnected()) {
             try {
                 socket.close();
+                socket = null;
                 return true;
             }
             catch (IOException ex){
@@ -182,7 +233,7 @@ public class MenuScreen extends AppCompatActivity
     }
 
     private boolean connectSocket(BluetoothDevice device){
-        if(device.equals(null)){
+        if(device == null){
             System.out.println("Device is null");
             return false;
         }
@@ -240,15 +291,21 @@ public class MenuScreen extends AppCompatActivity
         boolean result = true;
         try {
             outputStream.close();
+            outputStream = null;
         } catch(IOException ex2){
             System.out.println("Could not close outputStream");
             result = false;
+        } catch (NullPointerException ex2){
+            System.out.println("outputStream wasn't open, no need to close");
         }
         try {
             inStream.close();
+            inStream = null;
         }catch(IOException ex2){
             System.out.println("Could not close inStream");
             result = false;
+        }catch (NullPointerException ex2){
+            System.out.println("inStream wasn't open, no need to close");
         }
         return result;
     }
@@ -262,7 +319,7 @@ public class MenuScreen extends AppCompatActivity
         return device;
     }
 
-    private boolean sendStringBT(String message){
+    private boolean bluetoothWrite(String message){
         try {
             outputStream.write(message.getBytes());
             System.out.println("Message write to outputStream succeeded");
@@ -271,6 +328,25 @@ public class MenuScreen extends AppCompatActivity
         catch (IOException ex){
             System.out.println("Message write to outputStream failed");
             return false;
+        }
+    }
+
+    private String bluetoothRead(){
+        try{
+            int size = inStream.available();
+            if(size > 0) {
+                byte[] buffer = new byte[size];
+                inStream.read(buffer);
+                System.out.println("Read " + size + " bytes");
+                return buffer.toString();
+            }
+            else{
+                System.out.println("No bytes read");
+                return "";
+            }
+        }catch (IOException ex){
+            System.out.println("Could not read from inStream");
+            return null;
         }
     }
 
@@ -313,15 +389,8 @@ public class MenuScreen extends AppCompatActivity
         switch(id){
             case R.id.nav_device:
                 System.out.println("Menu: Device Setup");
-                if(!mBluetoothAdapter.isDiscovering()){
-                    mBluetoothAdapter.startDiscovery();
-                    System.out.println("Start Discovery");
-                }
-                else System.out.println("Still discovering");
-                if(connectSocket(matchBluetoothDevice())){
-                    openStreams();
-                }
-
+                if(socket == null) establishBluetooth();
+                else endBluetooth();
                 //AppendFile("TestWorkout", "__A__");
                 //ReadFile("TestWorkout");
                 //CreateFile("HELLO WORLD");
@@ -331,7 +400,8 @@ public class MenuScreen extends AppCompatActivity
                 break;
             case R.id.nav_edit_workout:
                 System.out.println("Menu: Workout Templates");
-                sendStringBT("Hello World");
+                bluetoothWrite("Hello World");
+                bluetoothRead();
                 //CreateFile("TestWorkout");
                 //ReadFile("TestWorkout");
                 break;

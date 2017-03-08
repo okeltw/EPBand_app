@@ -43,10 +43,6 @@
             android:label="Profile"
             android:screenOrientation="portrait"
             android:theme="@style/AppTheme.NoActionBar" />
-        <activity
-            android:name=".BluetoothConnect"
-            android:label="@string/title_activity_bluetooth_connect"
-            android:theme="@style/AppTheme.NoActionBar"></activity>
     </application>
 
 </manifest>
