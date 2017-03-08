@@ -79,6 +79,7 @@ public class MenuScreen extends AppCompatActivity
     private ArrayList<String> mDeviceList = new ArrayList<String>();
     private BluetoothAdapter mBluetoothAdapter;
     private BluetoothManager mBluetoothManager;
+    private Boolean mConnected = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -178,6 +179,7 @@ public class MenuScreen extends AppCompatActivity
                             if (connectSocket(matchBluetoothDevice())) {
                                 if(openStreams()){
                                     Toast.makeText(MenuScreen.this, "CONNECTED", Toast.LENGTH_LONG).show();
+                                    mConnected = true;
                                 }
                                 else{
                                     Toast.makeText(MenuScreen.this, "CONNECTION ERROR", Toast.LENGTH_LONG).show();
@@ -208,6 +210,7 @@ public class MenuScreen extends AppCompatActivity
                         if(disconnectSocket()){
                             socket = null;
                             Toast.makeText(MenuScreen.this, "DISCONNECTED", Toast.LENGTH_LONG).show();
+                            mConnected = false;
                         }
                     }
                 })
@@ -373,11 +376,20 @@ public class MenuScreen extends AppCompatActivity
         // automatically handle clicks on the Home/Up button, so long
         // as you specify a parent activity in AndroidManifest.xml.
         int id = item.getItemId();
-
         //noinspection SimplifiableIfStatement
-        //if (id == R.id.action_settings) {
-        //    return true;
-        //}
+        switch(id){
+            case R.id.bluetooth_status:
+                String Message = (mConnected) ? "EP Band is Connected" : "No bluetooth connection";
+                Snackbar.make(findViewById(R.id.nav_view), Message, Snackbar.LENGTH_SHORT)
+                        .setAction("CLOSE", new View.OnClickListener() {
+                            @Override
+                            public void onClick(View view) {
+                            }
+                        })
+                        .setActionTextColor(getResources().getColor(R.color.colorAccent))
+                        .show();
+                break;
+        }
         return super.onOptionsItemSelected(item);
     }
 
