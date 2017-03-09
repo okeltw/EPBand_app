@@ -47,6 +47,7 @@ import com.github.mikephil.charting.data.PieEntry;
 
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -63,6 +64,8 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
 import org.json.*;
+
+import javax.xml.datatype.Duration;
 
 public class MenuScreen extends AppCompatActivity
         implements NavigationView.OnNavigationItemSelectedListener {
@@ -145,12 +148,12 @@ public class MenuScreen extends AppCompatActivity
                 String deviceHardwareAddress = device.getAddress(); // MAC address
                 System.out.println("Device: " + deviceName + " " + deviceHardwareAddress);
 
-                try{
-                    if(deviceName.equals(desiredDeviceName)){
+                try {
+                    if (deviceName.equals(desiredDeviceName)) {
                         device.createBond();
                         System.out.println("Created bond " + mBluetoothAdapter.getBondedDevices());
                     }
-                }catch(NullPointerException ex){
+                } catch (NullPointerException ex) {
                 }
             }
         }
@@ -161,7 +164,7 @@ public class MenuScreen extends AppCompatActivity
         public void onReceive(Context context, Intent intent) {
             String action = intent.getAction();
             System.out.println("mReceiverBTConnect");
-            if(BluetoothDevice.ACTION_BOND_STATE_CHANGED.equals(action)){
+            if (BluetoothDevice.ACTION_BOND_STATE_CHANGED.equals(action)) {
                 BluetoothDevice device = intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE);
                 String deviceName = device.getName();
                 String deviceHardwareAddress = device.getAddress();
@@ -171,26 +174,24 @@ public class MenuScreen extends AppCompatActivity
         }
     };
 
-    private void establishBluetooth(){
+    private void establishBluetooth() {
         BluetoothDevice device = matchBluetoothDevice();
-        if(!(device == null)) {
+        if (!(device == null)) {
             Snackbar.make(findViewById(R.id.nav_view), "EP Band", Snackbar.LENGTH_INDEFINITE)
                     .setAction("CONNECT", new View.OnClickListener() {
                         @Override
                         public void onClick(View view) {
                             System.out.println("Connecting");
                             if (connectSocket(matchBluetoothDevice())) {
-                                if(openStreams()){
+                                if (openStreams()) {
                                     //Toast.makeText(MenuScreen.this, "CONNECTED", Toast.LENGTH_LONG).show();
                                     Snackbar.make(findViewById(R.id.nav_view), "CONNECTED", Snackbar.LENGTH_SHORT).show();
                                     mConnected = true;
-                                }
-                                else{
+                                } else {
                                     //Toast.makeText(MenuScreen.this, "CONNECTION ERROR", Toast.LENGTH_LONG).show();
                                     Snackbar.make(findViewById(R.id.nav_view), "CONNECTION ERROR", Snackbar.LENGTH_SHORT).show();
                                 }
-                            }
-                            else{
+                            } else {
                                 //Toast.makeText(MenuScreen.this, "FAILED CONNECTION", Toast.LENGTH_LONG).show();
                                 Snackbar.make(findViewById(R.id.nav_view), "FAILED CONNECTION", Snackbar.LENGTH_SHORT).show();
                             }
@@ -198,25 +199,23 @@ public class MenuScreen extends AppCompatActivity
                     })
                     .setActionTextColor(getResources().getColor(R.color.greenSuccess))
                     .show();
-        }
-        else{
-            if(!mBluetoothAdapter.isDiscovering()){
+        } else {
+            if (!mBluetoothAdapter.isDiscovering()) {
                 //Toast.makeText(MenuScreen.this, "Searching for EP Band", Toast.LENGTH_LONG).show();
                 Snackbar.make(findViewById(R.id.nav_view), "SEARCHING FOR EP BAND", Snackbar.LENGTH_SHORT).show();
                 mBluetoothAdapter.startDiscovery();
                 System.out.println("Start Discovery");
-            }
-            else System.out.println("Still discovering");
+            } else System.out.println("Still discovering");
         }
     }
 
-    private void endBluetooth(){
+    private void endBluetooth() {
         Snackbar.make(findViewById(R.id.nav_view), "EP Band", Snackbar.LENGTH_LONG)
                 .setAction("DISCONNECT", new View.OnClickListener() {
                     @Override
                     public void onClick(View view) {
                         System.out.println("Disconnecting");
-                        if(disconnectSocket()){
+                        if (disconnectSocket()) {
                             socket = null;
                             //Toast.makeText(MenuScreen.this, "DISCONNECTED", Toast.LENGTH_LONG).show();
                             Snackbar.make(findViewById(R.id.nav_view), "DISCONNECTED", Snackbar.LENGTH_SHORT).show();
@@ -229,39 +228,35 @@ public class MenuScreen extends AppCompatActivity
 
     }
 
-    private boolean disconnectSocket(){
+    private boolean disconnectSocket() {
         closeStreams();
-        if(socket.isConnected()) {
+        if (socket.isConnected()) {
             try {
                 socket.close();
                 socket = null;
                 return true;
-            }
-            catch (IOException ex){
+            } catch (IOException ex) {
                 System.out.println("Could not close socket");
                 return false;
             }
-        }
-        else return true;
+        } else return true;
     }
 
-    private boolean connectSocket(BluetoothDevice device){
-        if(device == null){
+    private boolean connectSocket(BluetoothDevice device) {
+        if (device == null) {
             System.out.println("Device is null");
             return false;
-        }
-        else{
+        } else {
             //No longer need to waste resources trying to discover devices
-            if(mBluetoothAdapter.isDiscovering()) mBluetoothAdapter.cancelDiscovery();
+            if (mBluetoothAdapter.isDiscovering()) mBluetoothAdapter.cancelDiscovery();
             ParcelUuid[] uuids = device.getUuids();
             //attempt normal connection
             try {
                 socket = device.createInsecureRfcommSocketToServiceRecord(uuids[0].getUuid());
-                if(!socket.isConnected()){
+                if (!socket.isConnected()) {
                     socket.connect();
                     return true;
-                }
-                else return false;
+                } else return false;
             } catch (IOException ex) {
                 //If connection fails, use the workaround for Android 4.2 and above
                 System.out.println("Attempting alternate bluetooth socket connection");
@@ -270,7 +265,7 @@ public class MenuScreen extends AppCompatActivity
                     socket = (BluetoothSocket) m.invoke(device, Integer.valueOf(1)); // 1==RFCOMM channel code
                     socket.connect();
                     return true;
-                }catch(Exception ex2){
+                } catch (Exception ex2) {
                     //All attempts failed
                     System.out.println("Completely unable to open bluetooth socket");
                     return false;
@@ -283,8 +278,8 @@ public class MenuScreen extends AppCompatActivity
         }
     }
 
-    private boolean openStreams(){
-        if(socket.isConnected()) {
+    private boolean openStreams() {
+        if (socket.isConnected()) {
             try {
                 outputStream = socket.getOutputStream();
                 System.out.println("Output Stream Open");
@@ -300,64 +295,62 @@ public class MenuScreen extends AppCompatActivity
         } else return false;
     }
 
-    private boolean closeStreams(){
+    private boolean closeStreams() {
         boolean result = true;
         try {
             outputStream.close();
             outputStream = null;
-        } catch(IOException ex2){
+        } catch (IOException ex2) {
             System.out.println("Could not close outputStream");
             result = false;
-        } catch (NullPointerException ex2){
+        } catch (NullPointerException ex2) {
             System.out.println("outputStream wasn't open, no need to close");
         }
         try {
             inStream.close();
             inStream = null;
-        }catch(IOException ex2){
+        } catch (IOException ex2) {
             System.out.println("Could not close inStream");
             result = false;
-        }catch (NullPointerException ex2){
+        } catch (NullPointerException ex2) {
             System.out.println("inStream wasn't open, no need to close");
         }
         return result;
     }
 
-    private BluetoothDevice matchBluetoothDevice(){
+    private BluetoothDevice matchBluetoothDevice() {
         BluetoothDevice device = null;
         Set<BluetoothDevice> BondedDevices = mBluetoothAdapter.getBondedDevices();
-        for(BluetoothDevice d: BondedDevices){
-            if(d.getName().equals(desiredDeviceName)) device = d;
+        for (BluetoothDevice d : BondedDevices) {
+            if (d.getName().equals(desiredDeviceName)) device = d;
         }
         return device;
     }
 
-    private boolean bluetoothWrite(String message){
+    private boolean bluetoothWrite(String message) {
         try {
             outputStream.write(message.getBytes());
             System.out.println("Message write to outputStream succeeded");
             return true;
-        }
-        catch (IOException ex){
+        } catch (IOException ex) {
             System.out.println("Message write to outputStream failed");
             return false;
         }
     }
 
-    private String bluetoothRead(){
-        try{
+    private String bluetoothRead() {
+        try {
             int size = inStream.available();
-            if(size > 0) {
+            if (size > 0) {
                 byte[] buffer = new byte[size];
                 inStream.read(buffer);
                 System.out.println("Read " + size + " bytes");
                 return new String(buffer);
-            }
-            else{
+            } else {
                 System.out.println("No bytes read");
                 return "";
             }
-        }catch (IOException ex){
+        } catch (IOException ex) {
             System.out.println("Could not read from inStream");
             return null;
         }
@@ -387,7 +380,7 @@ public class MenuScreen extends AppCompatActivity
         // as you specify a parent activity in AndroidManifest.xml.
         int id = item.getItemId();
         //noinspection SimplifiableIfStatement
-        switch(id){
+        switch (id) {
             case R.id.bluetooth_status:
                 String Message = (mConnected) ? "EP Band is Connected" : "No bluetooth connection";
                 Snackbar.make(findViewById(R.id.nav_view), Message, Snackbar.LENGTH_SHORT)
@@ -408,10 +401,20 @@ public class MenuScreen extends AppCompatActivity
         // Handle navigation view item clicks here.
         int id = item.getItemId();
         hideAllCharts();
-        switch(id){
+
+        //SAMPLE HEART RATE DATA
+        HeartRate HR = new HeartRate();
+        HR.SetSampleRate("00:06.0000");
+        int[] BPM = new int[1000];
+        for(int i = 0; i < BPM.length; i++){
+            BPM[i] = (int)(220*Math.pow(Math.cos(i*Math.PI/100.0),2));
+        }
+        HR.AddData(BPM);
+
+        switch (id) {
             case R.id.nav_device:
                 System.out.println("Menu: Device Setup");
-                if(socket == null) establishBluetooth();
+                if (socket == null) establishBluetooth();
                 else endBluetooth();
                 //AppendFile("TestWorkout", "__A__");
                 //ReadFile("TestWorkout");
@@ -426,7 +429,7 @@ public class MenuScreen extends AppCompatActivity
                 //bluetoothRead();
                 String filename = "JOBJECT";
                 CreateFile(filename);
-                JSONObject jObj = testJSON();
+                /*JSONObject jObj = testJSON();
                 AppendFile(filename,jObj.toString());
                 String content = ReadFile(filename);
                 try {
@@ -434,7 +437,7 @@ public class MenuScreen extends AppCompatActivity
                     System.out.println("File contained:\n"+jObj);
                 }catch(Exception ex){
                     System.out.println("Couldn't read JSON");
-                }
+                }*/
                 ListFiles();
                 break;
             case R.id.nav_profile:
@@ -445,13 +448,23 @@ public class MenuScreen extends AppCompatActivity
                 break;
             case R.id.nav_review:
                 System.out.println("Menu: View Analysis");
-                List<Entry> entries = TestLineData();
-                float[] counts = AnalyzeHeartRateData(entries, 220);
-                CreateHeartRateSummary((PieChart) findViewById(R.id.piechart), counts[0], counts[1], counts[2], counts[3]);
+                System.out.println(HR.GetJSONString());
+                try {
+                    HR.CalculateSummary(220);
+                    HR.PlotSummary((PieChart) findViewById(R.id.piechart));
+                }catch(JSONException ex){
+                    System.out.println("JSON ERROR with Summary");
+                }
                 break;
             case R.id.nav_workout_start:
                 System.out.println("Menu: Start Workout");
-                TestLineChart();
+                HR.PlotAll((LineChart) findViewById(R.id.linechart));
+                try{
+                    System.out.println(HR.GetJSONObject());
+                }catch (JSONException ex){
+
+                }
+                //TestLineChart();
                 break;
         }
         //testJSON();
@@ -460,68 +473,44 @@ public class MenuScreen extends AppCompatActivity
         return true;
     }
 
-    private void hideAllCharts(){
+    private void hideAllCharts() {
         ((PieChart) findViewById(R.id.piechart)).setVisibility(View.INVISIBLE);
         ((BarChart) findViewById(R.id.barchart)).setVisibility(View.INVISIBLE);
         ((LineChart) findViewById(R.id.linechart)).setVisibility(View.INVISIBLE);
     }
 
-    private void TestLineChart(){
+    private void TestLineChart() {
         List<Entry> entries = TestLineData();
         LineChart chart = (LineChart) findViewById(R.id.linechart);
         CreateLineChart(chart, entries);
     }
 
-    private float[] AnalyzeHeartRateData(List<Entry> entries, int MHR){
-
-        float Y;
-        float[] counts = {0f, 0f, 0f, 0f};
-        Entry entry;
-        for(int i = 0; i < entries.size(); i++){
-            entry = entries.get(i);
-            Y = entry.getY();
-            if( Y < rest*MHR){
-                counts[0]++;
-            }
-            else if( Y < aerobic*MHR){
-                counts[1]++;
-            }
-            else if( Y < anaerobic*MHR){
-                counts[2]++;
-            }
-            else{
-                counts[3]++;
-            }
-        }
-        return counts;
-    }
-
-    private List<Entry> TestLineData(){
+    private List<Entry> TestLineData() {
         List<Entry> entries = new ArrayList<Entry>();
         float Y;
         int X = 0;
         int MHR = 220;
 
-        for (; X < 200; X++){
-            Y = (float)(0.5*MHR + (X % 5));
-            entries.add(new Entry(X,Y));
+        for (; X < 200; X++) {
+            Y = (float) (0.5 * MHR + (X % 5));
+            entries.add(new Entry(X, Y));
         }
-        for (; X < 650; X++){
-            Y = (float)(0.6*MHR + (X % 5));
-            entries.add(new Entry(X,Y));
+        for (; X < 650; X++) {
+            Y = (float) (0.6 * MHR + (X % 5));
+            entries.add(new Entry(X, Y));
         }
-        for (; X < 900; X++){
-            Y = (float)(0.7*MHR + (X % 5));
-            entries.add(new Entry(X,Y));
+        for (; X < 900; X++) {
+            Y = (float) (0.7 * MHR + (X % 5));
+            entries.add(new Entry(X, Y));
         }
-        for (; X < 1000; X++){
-            Y = (float)(0.8*MHR + (X % 5));
-            entries.add(new Entry(X,Y));
+        for (; X < 1000; X++) {
+            Y = (float) (0.8 * MHR + (X % 5));
+            entries.add(new Entry(X, Y));
         }
         return entries;
     }
 
-    public void CreateLineChart(LineChart chart, List<Entry> entries){
+    public void CreateLineChart(LineChart chart, List<Entry> entries) {
         // VISIBILITY ON
         chart.setVisibility(View.VISIBLE);
 
@@ -551,56 +540,8 @@ public class MenuScreen extends AppCompatActivity
         chart.invalidate();
     }
 
-    public void CreateHeartRateSummary(PieChart chart, float unread, float rest, float aerobic, float anaerobic){
-        // VISIBILITY ON
-        chart.setVisibility(View.VISIBLE);
-
-        // CREATE DATA
-        List<PieEntry> entries = new ArrayList<>();
-        entries.add(new PieEntry(unread, "Unread"));
-        entries.add(new PieEntry(rest, "Resting"));
-        entries.add(new PieEntry(aerobic, "Aerobic"));
-        entries.add(new PieEntry(anaerobic, "Anaerobic"));
-        PieDataSet set = new PieDataSet(entries, "Heart Rate Over Workout");
-
-        // CHART STYLE SETTINGS
-        set.setColors(Color.rgb(160, 160, 160), Color.rgb(0, 128, 255), Color.rgb(255, 255, 0), Color.rgb(255, 0, 0));
-        PieData data = new PieData(set);
-        data.setValueTextSize(16.0f);
-        data.setValueTextColor(Color.BLACK);
-        chart.setEntryLabelTextSize(24.0f);
-        chart.setUsePercentValues(true);
-        chart.setHoleRadius(0f);
-        chart.setTransparentCircleAlpha(0);
-
-        if(true){
-            // Don't use labels on chart
-            chart.setDrawEntryLabels(false);
-        }
-        else{
-            // Use labels on chart
-            chart.setDrawEntryLabels(true);
-            chart.setEntryLabelColor(Color.rgb(0, 0, 0));
-        }
-
-        // LEGEND SETTINGS
-        Legend legend = chart.getLegend();
-        legend.setEnabled(true);
-        legend.setTextColor(Color.rgb(255, 255, 255));
-        legend.setTextSize(16.0f);
-        //legend.setTypeface(Typeface TF);
-        legend.setForm(Legend.LegendForm.CIRCLE);
-        legend.setOrientation(Legend.LegendOrientation.HORIZONTAL);
-        legend.setWordWrapEnabled(true);
-
-        // SET DATA AND UPDATE CHART
-        chart.setDescription(null);
-        chart.setData(data);
-        chart.invalidate(); // refresh
-    }
-
-    private int[] GetProfile(String filename){
-        SharedPreferences Settings = getSharedPreferences(filename,MODE_PRIVATE);
+    private int[] GetProfile(String filename) {
+        SharedPreferences Settings = getSharedPreferences(filename, MODE_PRIVATE);
         int[] profile = new int[6];
         profile[0] = Settings.getInt("height", 70);
         profile[1] = Settings.getInt("weight", 170);
@@ -611,11 +552,9 @@ public class MenuScreen extends AppCompatActivity
         return profile;
     }
 
-    public void PrintProfile(){
+    public void PrintProfile() {
         int[] profile = GetProfile("test");
         System.out.println("height: " + profile[0]);
-        int[] measure = GetHeight(profile[0]);
-        System.out.println(measure[0] + "'" + measure[1] + "\"");
         System.out.println("weight: " + profile[1]);
         System.out.println("age: " + profile[2]);
         System.out.println("gender: " + profile[3]);
@@ -623,19 +562,19 @@ public class MenuScreen extends AppCompatActivity
         System.out.println("arm: " + profile[5]);
     }
 
-    public String NewFilename(String WorkoutName){
+    public String NewFilename(String WorkoutName) {
         //Returns the current date and time used for the file
         String filename = WorkoutName + DateFormat.getDateTimeInstance().format(new Date());
         String[] List = fileList();
-        for(String f: List){
-            if(f == filename){
+        for (String f : List) {
+            if (f == filename) {
                 filename = filename + "-";
             }
         }
         return filename;
     }
 
-    public void ListFiles(){
+    public void ListFiles() {
         File Dir = getFilesDir();
         String[] List = fileList();
 
@@ -643,92 +582,56 @@ public class MenuScreen extends AppCompatActivity
         System.out.println("Directory Name: " + Dir.getName());
         System.out.println("Size: " + Dir.getTotalSpace() + " Free: " + Dir.getFreeSpace());
         System.out.println("\nFiles:");
-        for(String f: List){
+        for (String f : List) {
             System.out.println(f);
         }
     }
 
-    public void CreateFile(String filename){
-        try{
+    public void CreateFile(String filename) {
+        try {
             FileOutputStream f = openFileOutput(filename, MODE_PRIVATE);
             System.out.println("Created output file");
             f.close();
-        } catch (Exception ex){
+        } catch (Exception ex) {
             System.out.println("Well fuck... Can't open files");
         }
     }
 
-    public void AppendFile(String filename, String message){
-        try {
-            FileOutputStream f = openFileOutput(filename, MODE_APPEND);
-            f.write(message.getBytes());
-            f.close();
-        } catch (Exception ex){
-            System.out.println("Well fuck... Can't append to files");
-        }
+    public void AppendFile(String filename, String message) throws IOException {
+        FileOutputStream f = openFileOutput(filename, MODE_APPEND);
+        f.write(message.getBytes());
+        f.close();
     }
 
-    public String ReadFile(String filename){
-        try{
+    public String ReadFile(String filename) throws IOException {
+        try {
             FileInputStream f = openFileInput(filename);
             int size = f.available();
             byte[] content = new byte[size];
             f.read(content);
-            String contents = new String(content);
-            System.out.println("File contains " + size + " bytes :\n" + contents);
             f.close();
-            return contents;
-        } catch(Exception ex){
-            System.out.println("Well fuck... Can't read from files");
+            return new String(content);
+        } catch (FileNotFoundException ex) {
             return null;
         }
     }
 
-    public JSONObject readWorkoutFile(String filename){
-        try{
-            FileInputStream f = openFileInput(filename);
-            int size = f.available();
-            byte[] content = new byte[size];
-            f.read(content);
-            f.close();
-            String jString = new String(content);
-            JSONObject jObject = new JSONObject(jString);
-            return jObject;
-        } catch(Exception ex){
-            System.out.println("Couldn't get JSON Object from file");
-            return new JSONObject();
-        }
-    }
-
-    private JSONObject testJSON(){
+    private JSONObject testJSON() {
         JSONObject jObject = new JSONObject();
         JSONArray jArray = new JSONArray();
-        for(int i = 1; i < 100; i++){
+        for (int i = 1; i < 100; i++) {
             jArray.put(i);
         }
-        try{
+        try {
             DateFormat dateFormat = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss");
             Date date = new Date();
             String dateString = dateFormat.format(date);
             jObject.put("Array", jArray);
             jObject.put("date", dateString);
             System.out.println(jObject.toString());
-            return  jObject;
-        }
-        catch (Exception ex){
+            return jObject;
+        } catch (Exception ex) {
             return new JSONObject();
         }
     }
-
-    public int[] GetHeight(int height){
-        int[] measure = new int[2];
-        measure[0] = height/12;
-        measure[1] = height - 12*measure[0];
-        return measure;
-    }
-
-    public int GetInches(int feet, int inches){
-        return (12*feet + inches);
-    }
-
 }
