@@ -65,8 +65,6 @@ import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
 import org.json.*;
 
-import javax.xml.datatype.Duration;
-
 public class MenuScreen extends AppCompatActivity
         implements NavigationView.OnNavigationItemSelectedListener {
 
@@ -404,7 +402,7 @@ public class MenuScreen extends AppCompatActivity
 
         //SAMPLE HEART RATE DATA
         HeartRate HR = new HeartRate();
-        HR.SetSampleRate("00:06.0000");
+        HR.SetSampleRate(new Date(6000));
         int[] BPM = new int[1000];
         for(int i = 0; i < BPM.length; i++){
             BPM[i] = (int)(220*Math.pow(Math.cos(i*Math.PI/100.0),2));

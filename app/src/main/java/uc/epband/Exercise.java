@@ -5,41 +5,27 @@ import android.util.Size;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
-
-import java.lang.reflect.Array;
-import java.text.DateFormat;
 import java.text.ParseException;
-import java.text.SimpleDateFormat;
 import java.util.Date;
 
-public class Exercise {
+public class Exercise implements Constants{
     private Boolean mValid = false, mAnalyzed = false;
-    private String mExercise = "", mStartTime = "", mTimeLength = "", mSampleStep = "";
-    private Double mGoalROM = 0.9d, mAverageROM = 0d;
-    private int mReps = 0;
+    private String mExercise, mStartTime, mTimeLength, mSampleStep;
+    private Double mGoalROM, mAverageROM;
+    private int mReps;
     private JSONArray mRotX, mRotY, mRotZ, mDistX, mDistY, mDistZ;
-    private static final DateFormat dateFormat = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss.SSSS");
 
-    //JSON Member names
-    private static final String
-            VALID = "Valid",
-            ANALYZED = "Analyzed",
-            EXERCISE = "Exercise",
-            START_TIME = "StartTime",
-            TIME_LENGTH = "TimeLength",
-            SAMPLE_STEP = "SampleStep",
-            GOAL_ROM = "GoalROM",
-            AVG_ROM = "AvgROM",
-            REPS = "Reps",
-            ROT_X = "RotationX",
-            ROT_Y = "RotationY",
-            ROT_Z = "RotationZ",
-            DIST_X = "DistanceX",
-            DIST_Y = "DistanceY",
-            DIST_Z = "DistanceZ";
 
     public Exercise(){
-
+        mRotX = new JSONArray();
+        mRotY = new JSONArray();
+        mRotZ = new JSONArray();
+        mDistX = new JSONArray();
+        mDistY = new JSONArray();
+        mDistZ = new JSONArray();
+        mReps = 0;
+        mGoalROM = 0.8;
+        mAverageROM = 0.0;
     }
 
     public Exercise(String jString) throws JSONException{
@@ -75,6 +61,10 @@ public class Exercise {
         mValid = jObject.getBoolean(VALID);
         mAnalyzed = jObject.getBoolean(ANALYZED);
         return mValid;
+    }
+
+    public String getName(){
+        return mExercise;
     }
 
     public JSONObject GetJSONObject() throws JSONException{
@@ -124,20 +114,42 @@ public class Exercise {
         mDistZ.put(Z);
     }
 
+    public void AddDistanceX(double val) throws JSONException{
+        mDistX.put(val);
+    }
+
+    public void AddDistanceY(double val) throws JSONException{
+        mDistY.put(val);
+    }
+
+    public void AddDistanceZ(double val) throws JSONException{
+        mDistZ.put(val);
+    }
+
+    public void AddRotationX(double val) throws JSONException{
+        mRotX.put(val);
+    }
+
+    public void AddRotationY(double val) throws JSONException{
+        mRotY.put(val);
+    }
+
+    public void AddRotationZ(double val) throws JSONException{
+        mRotZ.put(val);
+    }
+
     public void SetStartTime(Date date){
-        mStartTime = dateFormat.format(date);
+        mStartTime = C_DATE_FORMAT.format(date);
     }
 
     public void SetEndTime(Date endDate) throws ParseException{
-        Date start = dateFormat.parse(mStartTime);
+        Date start = C_DATE_FORMAT.parse(mStartTime);
         if(endDate.after(start)){
-            mTimeLength = dateFormat.format(new Date(endDate.getTime() - start.getTime()));
+            mTimeLength = C_DATE_FORMAT.format(new Date(endDate.getTime() - start.getTime()));
         }
         else{
-            mTimeLength = dateFormat.format(new Date(0));
+            mTimeLength = C_DATE_FORMAT.format(new Date(0));
             mValid = false;
         }
     }
-
-
 }

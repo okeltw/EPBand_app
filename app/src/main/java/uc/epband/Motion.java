@@ -1,23 +1,17 @@
 package uc.epband;
 
-
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-import java.text.DateFormat;
-import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.List;
 
-public class Motion {
-    private JSONArray mExerciseData = new JSONArray();
-    private static final DateFormat dateFormat = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss.SSSS");
-
-    private static final String EXERCISE_DATA = "ExerciseData";
+public class Motion implements Constants{
+    private JSONArray mExerciseData;
 
     public Motion(){
-
+        mExerciseData = new JSONArray();
     }
 
     public Motion(String jString) throws JSONException{
@@ -47,7 +41,7 @@ public class Motion {
     public List<String> GetExerciseList() throws JSONException{
         List<String> Exercises = new ArrayList<>();
         for(int i = 0; i < mExerciseData.length(); i++){
-            Exercises.add(mExerciseData.getString(i));
+            Exercises.add(mExerciseData.getJSONObject(i).getString(EXERCISE));
         }
         return Exercises;
     }

@@ -17,26 +17,15 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-import java.sql.Time;
-import java.text.DateFormat;
-import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 
-import javax.xml.datatype.Duration;
-
-public class HeartRate {
+public class HeartRate implements Constants{
     private Boolean mValid = false, mAnalyzed = false;
     private double mUnread = 0, mRest = 0, mAerobic = 0, mAnaerobic = 0;
     private String mSampleStep = "";
     private JSONArray mRawBPM = new JSONArray();
-    private static float anaerobic = 0.8f, aerobic = 0.7f, rest = 0.6f;
-    private static final DateFormat dateFormat = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss.SSSS");
-
-    //JSON Member names
-    private static final String VALID = "Valid", ANALYZED = "Analyzed", UNREAD = "Unread",
-            REST = "Rest", AEROBIC = "Aerobic", ANAEROBIC = "Anaerobic", SAMPLE_STEP = "SampleStep",
-            RAW_BPM = "RawBPM";
 
     public HeartRate(){
 
@@ -56,9 +45,10 @@ public class HeartRate {
         return true;
     }
 
-    public void SetSampleRate(String rate){
-        mSampleStep = rate;
+    public void SetSampleRate(Date sample_time){
+        mSampleStep = C_TIME_FORMAT.format(sample_time);
     }
+
     public Boolean UseJSONObject(JSONObject jObject) throws JSONException{
         mValid = false;
         mRawBPM = jObject.getJSONArray(RAW_BPM);
@@ -119,16 +109,16 @@ public class HeartRate {
         mAerobic = 0;
         mUnread = 0;
 
-        double value = 0;
+        double value;
         for(int i = 0; i < mRawBPM.length(); i++){
-           value = mRawBPM.getInt(i);
-            if( value < rest*MHR){
+            value = mRawBPM.getInt(i);
+            if( value < HR_REST*MHR){
                 mUnread++;
             }
-            else if( value < aerobic*MHR){
+            else if( value < HR_AEROBIC*MHR){
                 mRest++;
             }
-            else if( value < anaerobic*MHR){
+            else if( value < HR_ANAEROBIC*MHR){
                 mAerobic++;
             }
             else{
@@ -139,7 +129,7 @@ public class HeartRate {
     }
 
     public void PlotAll(LineChart chart) {
-        List<Entry> entries = new ArrayList<Entry>();
+        List<Entry> entries = new ArrayList<>();
         for(int x = 0; x < mRawBPM.length(); x++){
             try{
                 entries.add(new Entry(x,mRawBPM.getInt(x)));
@@ -183,11 +173,11 @@ public class HeartRate {
 
         // CREATE DATA
         List<PieEntry> entries = new ArrayList<>();
-        entries.add(new PieEntry((float)mUnread, "Unread"));
-        entries.add(new PieEntry((float)mRest, "Resting"));
-        entries.add(new PieEntry((float)mAerobic, "Aerobic"));
-        entries.add(new PieEntry((float)mAnaerobic, "Anaerobic"));
-        PieDataSet set = new PieDataSet(entries, "Heart Rate Over Workout");
+        entries.add(new PieEntry((float)mUnread, "Unread (0% - 60% MHR)"));
+        entries.add(new PieEntry((float)mRest, "Resting (60% - 70% MHR)"));
+        entries.add(new PieEntry((float)mAerobic, "Aerobic (70% - 80% MHR)"));
+        entries.add(new PieEntry((float)mAnaerobic, "Anaerobic (80% - 100% MHR)"));
+        PieDataSet set = new PieDataSet(entries, "Heart Rate Levels as Percent of Time");
 
         // CHART STYLE SETTINGS
         set.setColors(Color.rgb(160, 160, 160), Color.rgb(0, 128, 255), Color.rgb(255, 255, 0), Color.rgb(255, 0, 0));
@@ -198,7 +188,6 @@ public class HeartRate {
         chart.setUsePercentValues(true);
         chart.setHoleRadius(0f);
         chart.setTransparentCircleAlpha(0);
-
 
         // Don't use labels on chart
         chart.setDrawEntryLabels(false);
