@@ -6,6 +6,8 @@ import android.view.View;
 import com.github.mikephil.charting.charts.LineChart;
 import com.github.mikephil.charting.charts.PieChart;
 import com.github.mikephil.charting.components.Legend;
+import com.github.mikephil.charting.components.XAxis;
+import com.github.mikephil.charting.components.YAxis;
 import com.github.mikephil.charting.data.Entry;
 import com.github.mikephil.charting.data.LineData;
 import com.github.mikephil.charting.data.LineDataSet;
@@ -143,18 +145,26 @@ public class HeartRate implements Constants{
 
         // CREATE DATA
         LineDataSet dataSet = new LineDataSet(entries, "Line Graph");
+        dataSet.setDrawFilled(true);
+        dataSet.setFillColor(Color.RED);
 
         // DATA POINT STYLE SETTINGS
         dataSet.setColor(Color.WHITE);
-        dataSet.setCircleColor(Color.RED);
-        dataSet.setCircleColorHole(Color.BLACK);
+        dataSet.setCircleColor(Color.WHITE);
+        dataSet.setCircleColorHole(Color.WHITE);
         dataSet.setCircleHoleRadius(1f);
         dataSet.setCircleRadius(2f);
 
         // CHART STYLE SETTINGS
         chart.setVisibility(View.VISIBLE);
-        chart.getXAxis().setEnabled(true);
-        chart.getAxisLeft().setAxisMaximum(220f);
+        XAxis x = chart.getXAxis();
+        YAxis y = chart.getAxisLeft();
+        x.setEnabled(true);
+        x.setAxisMinimum(0.0f);
+        x.setAxisMaximum(entries.size());
+        y.setAxisMaximum(220.0f);
+        y.setAxisMinimum(0.0f);
+        //chart.getAxisLeft().setDrawTopYLabelEntry(true);
         chart.getAxisLeft().setEnabled(false);
 
         // LEGEND SETTINGS
@@ -176,7 +186,7 @@ public class HeartRate implements Constants{
         entries.add(new PieEntry((float)mUnread, "Unread (0% - 60% MHR)"));
         entries.add(new PieEntry((float)mRest, "Resting (60% - 70% MHR)"));
         entries.add(new PieEntry((float)mAerobic, "Aerobic (70% - 80% MHR)"));
-        entries.add(new PieEntry((float)mAnaerobic, "Anaerobic (80% - 100% MHR)"));
+        entries.add(new PieEntry((float) mAnaerobic, "Anaerobic (80% - 100% MHR)"));
         PieDataSet set = new PieDataSet(entries, "Heart Rate Levels as Percent of Time");
 
         // CHART STYLE SETTINGS

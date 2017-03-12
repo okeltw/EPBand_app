@@ -405,7 +405,7 @@ public class MenuScreen extends AppCompatActivity
         HR.SetSampleRate(new Date(6000));
         int[] BPM = new int[1000];
         for(int i = 0; i < BPM.length; i++){
-            BPM[i] = (int)(220*Math.pow(Math.cos(i*Math.PI/100.0),2));
+            BPM[i] = (int)(220*Math.pow(Math.cos(i*Math.PI/1000.0),2));
         }
         HR.AddData(BPM);
 
@@ -425,8 +425,8 @@ public class MenuScreen extends AppCompatActivity
                 System.out.println("Menu: Workout Templates");
                 //bluetoothWrite("Hello World");
                 //bluetoothRead();
-                String filename = "JOBJECT";
-                CreateFile(filename);
+                //String filename = "JOBJECT";
+                //CreateFile(filename);
                 /*JSONObject jObj = testJSON();
                 AppendFile(filename,jObj.toString());
                 String content = ReadFile(filename);
@@ -436,7 +436,24 @@ public class MenuScreen extends AppCompatActivity
                 }catch(Exception ex){
                     System.out.println("Couldn't read JSON");
                 }*/
-                ListFiles();
+                //ListFiles();
+                Exercise exercise = new Exercise();
+                try {
+                    double X = 0.0, Y = 0.0, Z = 0.0, rX = 0.0, rY = 0.0, rZ = 0.0;
+                    for(int i = 0; i < 100; i++){
+                        rX = 180*Math.sin(2*Math.PI*i/100);
+                        rY = 180*Math.cos(2*Math.PI*i/100);
+                        //rZ = Math.tan(2*Math.PI*i/100);
+                        //X = Math.cosh(2*Math.PI/100);
+                        //Y = Math.sinh(2*Math.PI/100);
+                        //Z= Math.tanh(2*Math.PI/100);
+                        exercise.AddData(X, Y, Z, rX, rY, rZ);
+                    }
+                    exercise.PlotAll((LineChart) findViewById(R.id.linechart));
+                }catch(JSONException ex){
+                    System.out.println("JSON Exception in exercise");
+                }
+
                 break;
             case R.id.nav_profile:
                 System.out.println("Menu: Profile");
