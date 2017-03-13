@@ -1,13 +1,19 @@
 <?xml version="1.0" encoding="utf-8"?>
 <menu xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto">
-<!--
+
     <item
-        android:id="@+id/action_settings"
+        android:id="@+id/delete_files"
         android:orderInCategory="100"
-        android:title="@string/action_settings"
+        android:title="@string/delete_files"
         app:showAsAction="never" />
-        -->
+
+    <item
+        android:id="@+id/workout1"
+        android:orderInCategory="99"
+        android:title="@string/workout1"
+        app:showAsAction="never" />
+
     <item
         android:id="@+id/bluetooth_status"
         android:orderInCategory="1"

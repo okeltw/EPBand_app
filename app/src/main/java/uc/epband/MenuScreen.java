@@ -1,6 +1,8 @@
 package uc.epband;
 
 import android.Manifest;
+import android.app.Activity;
+import android.app.Application;
 import android.app.FragmentManager;
 import android.app.FragmentTransaction;
 import android.bluetooth.BluetoothAdapter;
@@ -15,11 +17,15 @@ import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.graphics.Color;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Message;
 import android.os.ParcelUuid;
 import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.Snackbar;
 import android.support.v4.app.ActivityCompat;
+import android.support.v4.app.FragmentActivity;
 import android.text.format.DateUtils;
+import android.util.JsonReader;
 import android.util.Log;
 import android.view.View;
 import android.support.design.widget.NavigationView;
@@ -65,16 +71,12 @@ import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
 import org.json.*;
 
-public class MenuScreen extends AppCompatActivity
-        implements NavigationView.OnNavigationItemSelectedListener {
-
-    static float anaerobic = 0.8f;
-    static float aerobic = 0.7f;
-    static float rest = 0.6f;
-
-    private String mUUID = "1e0ca4ea-299d-4335-93eb-27fcfe7fa848";
+public class MenuScreen extends AppCompatActivity implements NavigationView.OnNavigationItemSelectedListener {
 
     public String desiredDeviceName = "Andrew's iPhone";
+
+    private Workout mWorkout;
+    private Context mContext;
 
     private BluetoothSocket socket = null;
     private OutputStream outputStream = null;
@@ -82,8 +84,12 @@ public class MenuScreen extends AppCompatActivity
 
     private ArrayList<String> mDeviceList = new ArrayList<String>();
     private BluetoothAdapter mBluetoothAdapter;
-    private BluetoothManager mBluetoothManager;
     private Boolean mConnected = false;
+
+    //RETURN CODES
+    private int SELECT_WORKOUT = 1;
+
+    //private BluetoothBandService BTservice = new BluetoothBandService();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -100,6 +106,8 @@ public class MenuScreen extends AppCompatActivity
 
         NavigationView navigationView = (NavigationView) findViewById(R.id.nav_view);
         navigationView.setNavigationItemSelectedListener(this);
+
+        mContext = getApplicationContext();
 
         //GET NECESSARY PERMISSIONS
         int MY_PERMISSIONS_REQUEST_ACCESS_COARSE_LOCATION = 1;
@@ -182,15 +190,12 @@ public class MenuScreen extends AppCompatActivity
                             System.out.println("Connecting");
                             if (connectSocket(matchBluetoothDevice())) {
                                 if (openStreams()) {
-                                    //Toast.makeText(MenuScreen.this, "CONNECTED", Toast.LENGTH_LONG).show();
                                     Snackbar.make(findViewById(R.id.nav_view), "CONNECTED", Snackbar.LENGTH_SHORT).show();
                                     mConnected = true;
                                 } else {
-                                    //Toast.makeText(MenuScreen.this, "CONNECTION ERROR", Toast.LENGTH_LONG).show();
                                     Snackbar.make(findViewById(R.id.nav_view), "CONNECTION ERROR", Snackbar.LENGTH_SHORT).show();
                                 }
                             } else {
-                                //Toast.makeText(MenuScreen.this, "FAILED CONNECTION", Toast.LENGTH_LONG).show();
                                 Snackbar.make(findViewById(R.id.nav_view), "FAILED CONNECTION", Snackbar.LENGTH_SHORT).show();
                             }
                         }
@@ -373,9 +378,6 @@ public class MenuScreen extends AppCompatActivity
 
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
-        // Handle action bar item clicks here. The action bar will
-        // automatically handle clicks on the Home/Up button, so long
-        // as you specify a parent activity in AndroidManifest.xml.
         int id = item.getItemId();
         //noinspection SimplifiableIfStatement
         switch (id) {
@@ -390,6 +392,19 @@ public class MenuScreen extends AppCompatActivity
                         .setActionTextColor(getResources().getColor(R.color.colorAccent))
                         .show();
                 break;
+            case R.id.delete_files:
+                Snackbar.make(findViewById(R.id.nav_view), "Delete all saved files?", Snackbar.LENGTH_SHORT)
+                        .setAction("CONFIRM", new View.OnClickListener() {
+                            @Override
+                            public void onClick(View view) {
+                                DeleteAllFiles();
+                            }
+                        })
+                        .setActionTextColor(getResources().getColor(R.color.colorAccent))
+                        .show();
+                break;
+            case R.id.workout1:
+                SampleWorkout1();
         }
         return super.onOptionsItemSelected(item);
     }
@@ -399,15 +414,6 @@ public class MenuScreen extends AppCompatActivity
         // Handle navigation view item clicks here.
         int id = item.getItemId();
         hideAllCharts();
-
-        //SAMPLE HEART RATE DATA
-        HeartRate HR = new HeartRate();
-        HR.SetSampleRate(new Date(6000));
-        int[] BPM = new int[1000];
-        for(int i = 0; i < BPM.length; i++){
-            BPM[i] = (int)(220*Math.pow(Math.cos(i*Math.PI/1000.0),2));
-        }
-        HR.AddData(BPM);
 
         switch (id) {
             case R.id.nav_device:
@@ -437,22 +443,6 @@ public class MenuScreen extends AppCompatActivity
                     System.out.println("Couldn't read JSON");
                 }*/
                 //ListFiles();
-                Exercise exercise = new Exercise();
-                try {
-                    double X = 0.0, Y = 0.0, Z = 0.0, rX = 0.0, rY = 0.0, rZ = 0.0;
-                    for(int i = 0; i < 100; i++){
-                        rX = 180*Math.sin(2*Math.PI*i/100);
-                        rY = 180*Math.cos(2*Math.PI*i/100);
-                        //rZ = Math.tan(2*Math.PI*i/100);
-                        //X = Math.cosh(2*Math.PI/100);
-                        //Y = Math.sinh(2*Math.PI/100);
-                        //Z= Math.tanh(2*Math.PI/100);
-                        exercise.AddData(X, Y, Z, rX, rY, rZ);
-                    }
-                    exercise.PlotAll((LineChart) findViewById(R.id.linechart));
-                }catch(JSONException ex){
-                    System.out.println("JSON Exception in exercise");
-                }
 
                 break;
             case R.id.nav_profile:
@@ -460,99 +450,49 @@ public class MenuScreen extends AppCompatActivity
                 Intent intent = new Intent(MenuScreen.this, ProfileActivity.class);
                 startActivity(intent);
                 PrintProfile();
+                ListFiles();
                 break;
             case R.id.nav_review:
                 System.out.println("Menu: View Analysis");
-                System.out.println(HR.GetJSONString());
+                Intent intent_review = new Intent(MenuScreen.this, SelectWorkout.class);
+                String[] List = fileList();
+                intent_review.putExtra("Files", List);
+                startActivityForResult(intent_review, 1);
+/*
+                System.out.println("Return from activity:\n");
+                System.out.println("intent result: " + intent_review.getStringExtra("result"));
                 try {
-                    HR.CalculateSummary(220);
-                    HR.PlotSummary((PieChart) findViewById(R.id.piechart));
+                    mWorkout.getHeartRate().CalculateSummary(GetMHR());
+                    mWorkout.getHeartRate().PlotSummary((PieChart) findViewById(R.id.piechart));
                 }catch(JSONException ex){
                     System.out.println("JSON ERROR with Summary");
                 }
+                */
                 break;
             case R.id.nav_workout_start:
-                System.out.println("Menu: Start Workout");
-                HR.PlotAll((LineChart) findViewById(R.id.linechart));
-                try{
-                    System.out.println(HR.GetJSONObject());
-                }catch (JSONException ex){
 
-                }
-                //TestLineChart();
+                System.out.println("Menu: Start Workout");
+                mWorkout.getHeartRate().PlotAll((LineChart) findViewById(R.id.linechart));
                 break;
         }
-        //testJSON();
         DrawerLayout drawer = (DrawerLayout) findViewById(R.id.drawer_layout);
         drawer.closeDrawer(GravityCompat.START);
         return true;
     }
 
     private void hideAllCharts() {
-        ((PieChart) findViewById(R.id.piechart)).setVisibility(View.INVISIBLE);
-        ((BarChart) findViewById(R.id.barchart)).setVisibility(View.INVISIBLE);
-        ((LineChart) findViewById(R.id.linechart)).setVisibility(View.INVISIBLE);
+        findViewById(R.id.piechart).setVisibility(View.INVISIBLE);
+        findViewById(R.id.barchart).setVisibility(View.INVISIBLE);
+        findViewById(R.id.linechart).setVisibility(View.INVISIBLE);
     }
 
-    private void TestLineChart() {
-        List<Entry> entries = TestLineData();
-        LineChart chart = (LineChart) findViewById(R.id.linechart);
-        CreateLineChart(chart, entries);
+    private int GetMHR(){
+        int[] stats = GetProfile();
+        return stats[4];
     }
 
-    private List<Entry> TestLineData() {
-        List<Entry> entries = new ArrayList<Entry>();
-        float Y;
-        int X = 0;
-        int MHR = 220;
-
-        for (; X < 200; X++) {
-            Y = (float) (0.5 * MHR + (X % 5));
-            entries.add(new Entry(X, Y));
-        }
-        for (; X < 650; X++) {
-            Y = (float) (0.6 * MHR + (X % 5));
-            entries.add(new Entry(X, Y));
-        }
-        for (; X < 900; X++) {
-            Y = (float) (0.7 * MHR + (X % 5));
-            entries.add(new Entry(X, Y));
-        }
-        for (; X < 1000; X++) {
-            Y = (float) (0.8 * MHR + (X % 5));
-            entries.add(new Entry(X, Y));
-        }
-        return entries;
-    }
-
-    public void CreateLineChart(LineChart chart, List<Entry> entries) {
-        // VISIBILITY ON
-        chart.setVisibility(View.VISIBLE);
-
-        // CREATE DATA
-        LineDataSet dataSet = new LineDataSet(entries, "Line Graph");
-
-        // DATA POINT STYLE SETTINGS
-        dataSet.setColor(Color.WHITE);
-        dataSet.setCircleColor(Color.RED);
-        dataSet.setCircleColorHole(Color.BLACK);
-        dataSet.setCircleHoleRadius(1f);
-        dataSet.setCircleRadius(2f);
-
-        // CHART STYLE SETTINGS
-        chart.setVisibility(View.VISIBLE);
-        chart.getXAxis().setEnabled(true);
-        chart.getAxisLeft().setAxisMaximum(220f);
-        chart.getAxisLeft().setEnabled(false);
-
-        // LEGEND SETTINGS
-        Legend legend = chart.getLegend();
-        legend.setEnabled(false);
-
-        // REFRESH
-        LineData lineData = new LineData(dataSet);
-        chart.setData(lineData);
-        chart.invalidate();
+    private int[] GetProfile(){
+        return GetProfile("test");
     }
 
     private int[] GetProfile(String filename) {
@@ -568,25 +508,13 @@ public class MenuScreen extends AppCompatActivity
     }
 
     public void PrintProfile() {
-        int[] profile = GetProfile("test");
+        int[] profile = GetProfile();
         System.out.println("height: " + profile[0]);
         System.out.println("weight: " + profile[1]);
         System.out.println("age: " + profile[2]);
         System.out.println("gender: " + profile[3]);
         System.out.println("MHR: " + profile[4]);
         System.out.println("arm: " + profile[5]);
-    }
-
-    public String NewFilename(String WorkoutName) {
-        //Returns the current date and time used for the file
-        String filename = WorkoutName + DateFormat.getDateTimeInstance().format(new Date());
-        String[] List = fileList();
-        for (String f : List) {
-            if (f == filename) {
-                filename = filename + "-";
-            }
-        }
-        return filename;
     }
 
     public void ListFiles() {
@@ -599,23 +527,26 @@ public class MenuScreen extends AppCompatActivity
         System.out.println("\nFiles:");
         for (String f : List) {
             System.out.println(f);
+            try{
+                System.out.println(ReadFile(f));
+            }catch(IOException ex){
+                System.out.println("UNREADABLE");
+            }
         }
     }
 
-    public void CreateFile(String filename) {
-        try {
-            FileOutputStream f = openFileOutput(filename, MODE_PRIVATE);
-            System.out.println("Created output file");
-            f.close();
-        } catch (Exception ex) {
-            System.out.println("Well fuck... Can't open files");
-        }
-    }
+    private void DeleteAllFiles(){
+        System.out.println("Deleting all EPBand files.");
+        String[] List = fileList();
+        for(String f: List){
+            if(f.startsWith(Constants.EXAMPLE) && !f.contains("(")) {
 
-    public void AppendFile(String filename, String message) throws IOException {
-        FileOutputStream f = openFileOutput(filename, MODE_APPEND);
-        f.write(message.getBytes());
-        f.close();
+            }else{
+                deleteFile(f);
+                System.out.println("\tDeleted: " + f);
+            }
+        }
+        System.out.println("Delete finished.\n");
     }
 
     public String ReadFile(String filename) throws IOException {
@@ -631,22 +562,108 @@ public class MenuScreen extends AppCompatActivity
         }
     }
 
-    private JSONObject testJSON() {
-        JSONObject jObject = new JSONObject();
-        JSONArray jArray = new JSONArray();
-        for (int i = 1; i < 100; i++) {
-            jArray.put(i);
+    /**
+     * The Handler that gets information back from the BluetoothChatService
+     */
+    private final Handler mHandler = new Handler() {
+        @Override
+        public void handleMessage(Message msg) {
+            //FragmentActivity activity = getActivity();
+            switch (msg.what) {
+                case Constants.MESSAGE_STATE_CHANGE:
+
+                    break;
+                case Constants.MESSAGE_WRITE:
+                    byte[] writeBuf = (byte[]) msg.obj;
+                    // construct a string from the buffer
+                    String writeMessage = new String(writeBuf);
+                    //mConversationArrayAdapter.add("Me:  " + writeMessage);
+                    break;
+                case Constants.MESSAGE_READ:
+                    byte[] readBuf = (byte[]) msg.obj;
+                    // construct a string from the valid bytes in the buffer
+                    String readMessage = new String(readBuf, 0, msg.arg1);
+                    //mConversationArrayAdapter.add(mConnectedDeviceName + ":  " + readMessage);
+                    break;
+                case Constants.MESSAGE_DEVICE_NAME:
+                    // save the connected device's name
+                    //mConnectedDeviceName = msg.getData().getString(Constants.DEVICE_NAME);
+                    /*if (null != activity) {
+                        //Toast.makeText(activity, "Connected to "
+                                //+ mConnectedDeviceName, Toast.LENGTH_SHORT).show();
+                    }*/
+                    break;
+                case Constants.MESSAGE_TOAST:
+                    /*if (null != activity) {
+                        Toast.makeText(activity, msg.getData().getString(Constants.TOAST),
+                                Toast.LENGTH_SHORT).show();
+                    }*/
+                    break;
+            }
         }
+    };
+
+    @Override
+    protected void onActivityResult ( int requestCode, int resultCode, Intent data) {
+
+        if (requestCode == SELECT_WORKOUT) {
+            if(resultCode == Activity.RESULT_OK){
+                String filename = data.getStringExtra("result");
+                System.out.println("Chose workout: " + filename);
+                try {
+                    mWorkout = new Workout(mContext, filename);
+                    System.out.println("Successfully loaded saved workout");
+                }catch(Exception ex){
+                    mWorkout = new Workout(mContext);
+                    System.out.println("Could not load saved workout");
+                }
+            }
+            if (resultCode == Activity.RESULT_CANCELED) {
+                mWorkout = new Workout(mContext);
+                System.out.println("Canceled workout select");
+            }
+        }
+    }//onActivityResult
+
+    private void SampleWorkout1(){
+        mWorkout = new Workout(mContext);
+        mWorkout.setExampleFileName("1");
+
+        //SAMPLE HEART RATE DATA
+        HeartRate HR = mWorkout.getHeartRate();
+        HR.SetSampleRate(new Date(6000));
+        int[] BPM = new int[1000];
+        for(int i = 0; i < BPM.length; i++){
+            BPM[i] = (int)(220*Math.pow(Math.cos(i*Math.PI/1000.0),2));
+        }
+        HR.AddData(BPM);
+
+        Exercise exercise = new Exercise();
         try {
-            DateFormat dateFormat = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss");
-            Date date = new Date();
-            String dateString = dateFormat.format(date);
-            jObject.put("Array", jArray);
-            jObject.put("date", dateString);
-            System.out.println(jObject.toString());
-            return jObject;
-        } catch (Exception ex) {
-            return new JSONObject();
+            double X = 0.0, Y = 0.0, Z = 0.0, rX = 0.0, rY = 0.0, rZ = 0.0;
+            for(int i = 0; i < 100; i++){
+                rX = 180*Math.sin(2 * Math.PI * i / 100);
+                rY = 180*Math.sin(2 * Math.PI * i / 100 + Math.PI/2);
+                rZ = 180*Math.sin(2 * Math.PI * i / 100 + Math.PI);
+                X = 360*i/100-180;
+                Y = -360*i/100+180;
+                Z = 0;
+                exercise.AddData(X, Y, Z, rX, rY, rZ);
+            }
+            exercise.PlotAll((LineChart) findViewById(R.id.linechart));
+            mWorkout.writeFile();
+        }catch(JSONException ex){
+            System.out.println("JSON Exception in exercise");
+        }catch(IOException ex){
+            System.out.println("IO Exception for workout");
         }
+    }
+
+    private void SampleWorkout2(){
+
+    }
+
+    private void NewWorkout(){
+        mWorkout = new Workout(mContext);
     }
 }

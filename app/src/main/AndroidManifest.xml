@@ -17,7 +17,6 @@
         android:icon="@mipmap/epband_logo"
         android:label="@string/app_name"
         android:supportsRtl="true"
-
         android:theme="@style/AppTheme">
         <activity
             android:name=".LoginActivity"
@@ -43,6 +42,10 @@
             android:label="Profile"
             android:screenOrientation="portrait"
             android:theme="@style/AppTheme.NoActionBar" />
+        <activity
+            android:name=".SelectWorkout"
+            android:label="Select Past Workout"
+            android:theme="@style/AppTheme.NoActionBar"></activity>
     </application>
 
 </manifest>

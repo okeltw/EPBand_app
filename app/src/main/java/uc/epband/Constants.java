@@ -7,14 +7,22 @@ import java.text.SimpleDateFormat;
 
 public interface Constants {
     //TIME FORMATS
-    DateFormat C_DATE_FORMAT = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss");
-    DateFormat C_TIME_FORMAT = new SimpleDateFormat("HH:mm:ss.SSSS");
+    DateFormat  C_FILE_FORMAT = new SimpleDateFormat("yyyy-MM-dd"),
+                C_DATE_FORMAT = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss"),
+                C_TIME_FORMAT = new SimpleDateFormat("HH:mm:ss.SSSS");
 
     //HEART RATE LEVELS
-    float HR_ANAEROBIC = 0.80f, HR_AEROBIC = 0.70f, HR_REST = 0.60f;
+    float       HR_ANAEROBIC = 0.80f,
+                HR_AEROBIC = 0.70f,
+                HR_REST = 0.60f;
 
     //JSON TAG STRINGS
-    String  /* GENERAL */
+    String  /*Workout String*/
+            EXAMPLE = "Example",
+            MOTION = "Motion",
+            HEART_RATE = "HeartRate",
+            TIME_STAMP = "TimeStamp",
+            /* GENERAL */
             VALID = "Valid",
             ANALYZED = "Analyzed",
             EXERCISE = "Exercise",
@@ -39,20 +47,17 @@ public interface Constants {
             ANAEROBIC = "Anaerobic",
             RAW_BPM = "RawBPM";
 
-        //COLORS
-        String
-                C_RED_HEX = "#FF0000",
-                C_GREEN_HEX = "#008000",
-                C_BLUE_HEX = "#0000FF",
-                C_MAROON_HEX = "#800000",
-                C_LIME_HEX = "#00FF00",
-                C_TEAL_HEX = "#008080";
+        int     C_X = Color.parseColor("#FF0000"), // Red
+                C_Y = Color.parseColor("#008000"), // Blue
+                C_Z = Color.parseColor("#0000FF"), // Green
+                C_RX = Color.parseColor("#FF00FF"), // Pink
+                C_RY = Color.parseColor("#FFFF00"), // Yellow
+                C_RZ = Color.parseColor("#00FFFF"); // Cyan
 
-        int
-                C_X = Color.parseColor(C_RED_HEX),
-                C_Y = Color.parseColor(C_GREEN_HEX),
-                C_Z = Color.parseColor(C_BLUE_HEX),
-                C_RX = Color.parseColor(C_MAROON_HEX),
-                C_RY = Color.parseColor(C_LIME_HEX),
-                C_RZ = Color.parseColor(C_TEAL_HEX);
+        // Message types sent from the BluetoothBandService Handler
+        int     MESSAGE_STATE_CHANGE = 1,
+                MESSAGE_READ = 2,
+                MESSAGE_WRITE = 3,
+                MESSAGE_DEVICE_NAME = 4,
+                MESSAGE_TOAST = 5;
 }
