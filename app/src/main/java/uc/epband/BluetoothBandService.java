@@ -1,16 +1,26 @@
 package uc.epband;
 
 import android.bluetooth.BluetoothAdapter;
+import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothSocket;
+import android.content.BroadcastReceiver;
 import android.content.Context;
+import android.content.Intent;
+import android.content.IntentFilter;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
+import android.os.ParcelUuid;
+import android.support.design.widget.Snackbar;
 import android.util.Log;
+import android.view.View;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.lang.reflect.Method;
+import java.util.ArrayList;
+import java.util.Set;
 
 public class BluetoothBandService {
     private static final String TAG = "MY_APP_DEBUG_TAG";
@@ -21,7 +31,53 @@ public class BluetoothBandService {
     private ConnectedThread mConnectedThread;
     private int mState;
     private int mNewState;
+    private Context mContext;
 
+    private BluetoothSocket socket = null;
+
+
+    private ArrayList<String> mDeviceList = new ArrayList<String>();
+    private Boolean mConnected = false;
+    public String desiredDeviceName = "Andrew's iPhone";
+
+    // Create a BroadcastReceiver for ACTION_FOUND.
+    private final BroadcastReceiver mReceiverBTDiscover = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            String action = intent.getAction();
+            if (BluetoothDevice.ACTION_FOUND.equals(action)) {
+                // Discovery has found a device. Get the BluetoothDevice
+                // object and its info from the Intent.
+                BluetoothDevice device = intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE);
+                String deviceName = device.getName();
+                String deviceHardwareAddress = device.getAddress(); // MAC address
+                System.out.println("Device: " + deviceName + " " + deviceHardwareAddress);
+
+                try {
+                    if (deviceName.equals(desiredDeviceName)) {
+                        device.createBond();
+                        System.out.println("Created bond " + mAdapter.getBondedDevices());
+                    }
+                } catch (NullPointerException ex) {
+                }
+            }
+        }
+    };
+
+    private final BroadcastReceiver mReceiverBTConnect = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            String action = intent.getAction();
+            System.out.println("mReceiverBTConnect");
+            if (BluetoothDevice.ACTION_BOND_STATE_CHANGED.equals(action)) {
+                BluetoothDevice device = intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE);
+                String deviceName = device.getName();
+                String deviceHardwareAddress = device.getAddress();
+                System.out.println("Bond State Device: " + deviceName + " " + deviceHardwareAddress);
+                System.out.println(BluetoothDevice.EXTRA_BOND_STATE);
+            }
+        }
+    };
 
     // Constants that indicate the current connection state
     public static final int STATE_NONE = 0;       // we're doing nothing
@@ -47,9 +103,114 @@ public class BluetoothBandService {
      */
     public BluetoothBandService(Context context, Handler handler) {
         mAdapter = BluetoothAdapter.getDefaultAdapter();
+        mAdapter.enable();
+        mAdapter.startDiscovery();
+
         mState = STATE_NONE;
         mNewState = mState;
         mHandler = handler;
+        mContext = context;
+
+        IntentFilter filter_search = new IntentFilter(BluetoothDevice.ACTION_FOUND);
+        mContext.registerReceiver(mReceiverBTDiscover, filter_search);
+
+        IntentFilter filter_connect = new IntentFilter(BluetoothDevice.ACTION_BOND_STATE_CHANGED);
+        mContext.registerReceiver(mReceiverBTConnect, filter_connect);
+    }
+
+    public void close(){
+        System.out.println("Closing BluetoothBandService.");
+        disconnectSocket();
+        mContext.unregisterReceiver(mReceiverBTDiscover);
+        mContext.unregisterReceiver(mReceiverBTConnect);
+    }
+
+    public boolean isConnected(){
+        if(socket == null) return false;
+        else if(socket.isConnected()) return true;
+        else return false;
+    }
+
+    public boolean canConnect(){
+        BluetoothDevice device = matchBluetoothDevice();
+        if(device == null){
+            System.out.println("No device found.");
+            return false;
+        }
+        else{
+            System.out.println("Device: " + device.getName() + " found.");
+            return true;
+        }
+    }
+
+    public boolean connect(){
+        System.out.println("Called bluetooth connect");
+        BluetoothDevice device = matchBluetoothDevice();
+        if( connectSocket(device) ){
+            mConnectedThread = new ConnectedThread(socket);
+            mConnectedThread.start();
+            return true;
+        }
+        else return false;
+    }
+
+    private BluetoothDevice matchBluetoothDevice() {
+        BluetoothDevice device = null;
+        Set<BluetoothDevice> BondedDevices = mAdapter.getBondedDevices();
+        for (BluetoothDevice d : BondedDevices) {
+            if (d.getName().equals(desiredDeviceName)) device = d;
+        }
+        return device;
+    }
+
+    private boolean connectSocket(BluetoothDevice device) {
+        if (device == null) {
+            System.out.println("Device is null");
+            return false;
+        } else {
+            //No longer need to waste resources trying to discover devices
+            if (mAdapter.isDiscovering()) mAdapter.cancelDiscovery();
+            ParcelUuid[] uuids = device.getUuids();
+            //attempt normal connection
+            try {
+                socket = device.createInsecureRfcommSocketToServiceRecord(uuids[0].getUuid());
+                if (!socket.isConnected()) {
+                    socket.connect();
+                    return true;
+                } else return false;
+            } catch (IOException ex) {
+                //If connection fails, use the workaround for Android 4.2 and above
+                System.out.println("Attempting alternate bluetooth socket connection");
+                try {
+                    Method m = device.getClass().getMethod("createInsecureRfcommSocket", new Class[]{int.class});
+                    socket = (BluetoothSocket) m.invoke(device, Integer.valueOf(1)); // 1==RFCOMM channel code
+                    socket.connect();
+                    return true;
+                } catch (Exception ex2) {
+                    //All attempts failed
+                    System.out.println("Completely unable to open bluetooth socket");
+                    return false;
+                }
+            } catch (NullPointerException ex) {
+                //Device doesn't properly offer a UUID
+                System.out.println("No uuids provided by device");
+                return false;
+            }
+        }
+    }
+
+    private boolean disconnectSocket() {
+        mConnectedThread.cancel();
+        if (socket.isConnected()) {
+            try {
+                socket.close();
+                socket = null;
+                return true;
+            } catch (IOException ex) {
+                System.out.println("Could not close socket");
+                return false;
+            }
+        } else return true;
     }
 
     private class ConnectedThread extends Thread {
@@ -67,11 +228,13 @@ public class BluetoothBandService {
             // member streams are final.
             try {
                 tmpIn = socket.getInputStream();
+                System.out.println("Input stream open");
             } catch (IOException e) {
                 Log.e(TAG, "Error occurred when creating input stream", e);
             }
             try {
                 tmpOut = socket.getOutputStream();
+                System.out.println("Output stream open");
             } catch (IOException e) {
                 Log.e(TAG, "Error occurred when creating output stream", e);
             }
@@ -87,12 +250,14 @@ public class BluetoothBandService {
             // Keep listening to the InputStream until an exception occurs.
             while (true) {
                 try {
+                    System.out.println("Attempt read from new thread");
                     // Read from the InputStream.
                     numBytes = mmInStream.read(mmBuffer);
                     // Send the obtained bytes to the UI activity.
                     Message readMsg = mHandler.obtainMessage(MessageConstants.MESSAGE_READ, numBytes, -1, mmBuffer);
                     readMsg.sendToTarget();
                 } catch (IOException e) {
+                    System.out.println("Disconnected");
                     Log.d(TAG, "Input stream was disconnected", e);
                     break;
                 }

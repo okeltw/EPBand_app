@@ -37,6 +37,7 @@ import android.support.v7.widget.Toolbar;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.widget.ArrayAdapter;
+import android.widget.ImageView;
 import android.widget.Toast;
 
 import com.github.mikephil.charting.charts.BarChart;
@@ -73,11 +74,12 @@ import org.json.*;
 
 public class MenuScreen extends AppCompatActivity implements NavigationView.OnNavigationItemSelectedListener {
 
-    public String desiredDeviceName = "Andrew's iPhone";
+    //public String desiredDeviceName = "Andrew's iPhone";
 
     private Workout mWorkout;
     private Context mContext;
 
+    /*
     private BluetoothSocket socket = null;
     private OutputStream outputStream = null;
     private InputStream inStream = null;
@@ -85,11 +87,53 @@ public class MenuScreen extends AppCompatActivity implements NavigationView.OnNa
     private ArrayList<String> mDeviceList = new ArrayList<String>();
     private BluetoothAdapter mBluetoothAdapter;
     private Boolean mConnected = false;
+    */
 
     //RETURN CODES
     private int SELECT_WORKOUT = 1;
 
-    //private BluetoothBandService BTservice = new BluetoothBandService();
+    private BluetoothBandService BTservice;
+
+    /**
+     * The Handler that gets information back from the BluetoothChatService
+     */
+    private final Handler mHandler = new Handler() {
+        @Override
+        public void handleMessage(Message msg) {
+            //FragmentActivity activity = getActivity();
+            switch (msg.what) {
+                case Constants.MESSAGE_STATE_CHANGE:
+
+                    break;
+                case Constants.MESSAGE_WRITE:
+                    byte[] writeBuf = (byte[]) msg.obj;
+                    // construct a string from the buffer
+                    String writeMessage = new String(writeBuf);
+                    //mConversationArrayAdapter.add("Me:  " + writeMessage);
+                    break;
+                case Constants.MESSAGE_READ:
+                    byte[] readBuf = (byte[]) msg.obj;
+                    // construct a string from the valid bytes in the buffer
+                    String readMessage = new String(readBuf, 0, msg.arg1);
+                    //mConversationArrayAdapter.add(mConnectedDeviceName + ":  " + readMessage);
+                    break;
+                case Constants.MESSAGE_DEVICE_NAME:
+                    // save the connected device's name
+                    //mConnectedDeviceName = msg.getData().getString(Constants.DEVICE_NAME);
+                    /*if (null != activity) {
+                        //Toast.makeText(activity, "Connected to "
+                                //+ mConnectedDeviceName, Toast.LENGTH_SHORT).show();
+                    }*/
+                    break;
+                case Constants.MESSAGE_TOAST:
+                    /*if (null != activity) {
+                        Toast.makeText(activity, msg.getData().getString(Constants.TOAST),
+                                Toast.LENGTH_SHORT).show();
+                    }*/
+                    break;
+            }
+        }
+    };
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -107,6 +151,11 @@ public class MenuScreen extends AppCompatActivity implements NavigationView.OnNa
         NavigationView navigationView = (NavigationView) findViewById(R.id.nav_view);
         navigationView.setNavigationItemSelectedListener(this);
 
+        /*
+        ImageView imageGronk = (ImageView) findViewById(R.id.background_image);
+        imageGronk.setVisibility(View.VISIBLE);
+        */
+
         mContext = getApplicationContext();
 
         //GET NECESSARY PERMISSIONS
@@ -116,6 +165,7 @@ public class MenuScreen extends AppCompatActivity implements NavigationView.OnNa
                 MY_PERMISSIONS_REQUEST_ACCESS_COARSE_LOCATION);
 
         //BLUETOOTH
+        /*
         mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
         mBluetoothAdapter.enable();
 
@@ -128,6 +178,9 @@ public class MenuScreen extends AppCompatActivity implements NavigationView.OnNa
 
         IntentFilter filter_connect = new IntentFilter(BluetoothDevice.ACTION_BOND_STATE_CHANGED);
         registerReceiver(mReceiverBTConnect, filter_connect);
+        */
+
+        BTservice = new BluetoothBandService(mContext, mHandler);
 
         hideAllCharts();
         System.out.println("Created App");
@@ -135,12 +188,16 @@ public class MenuScreen extends AppCompatActivity implements NavigationView.OnNa
 
     @Override
     protected void onDestroy() {
+        /*
         unregisterReceiver(mReceiverBTDiscover);
         unregisterReceiver(mReceiverBTConnect);
+        */
+        BTservice.close();
         System.out.println("Destroyed EP Band");
         super.onDestroy();
     }
 
+    /*
     // Create a BroadcastReceiver for ACTION_FOUND.
     private final BroadcastReceiver mReceiverBTDiscover = new BroadcastReceiver() {
         @Override
@@ -179,7 +236,9 @@ public class MenuScreen extends AppCompatActivity implements NavigationView.OnNa
             }
         }
     };
+    */
 
+    /*
     private void establishBluetooth() {
         BluetoothDevice device = matchBluetoothDevice();
         if (!(device == null)) {
@@ -211,19 +270,34 @@ public class MenuScreen extends AppCompatActivity implements NavigationView.OnNa
             } else System.out.println("Still discovering");
         }
     }
+    */
+    //BLUETOOTH CLASS REWRITE VERSION
+    private void establishBluetooth() {
+        if (BTservice.canConnect()) {
+            Snackbar.make(findViewById(R.id.nav_view), "EP Band", Snackbar.LENGTH_INDEFINITE)
+                    .setAction("CONNECT", new View.OnClickListener() {
+                        @Override
+                        public void onClick(View view) {
+                            System.out.println("Connecting");
+                            if ( BTservice.connect() ) {
+                                Snackbar.make(findViewById(R.id.nav_view), "CONNECTED", Snackbar.LENGTH_SHORT).show();
+                            } else {
+                                Snackbar.make(findViewById(R.id.nav_view), "FAILED CONNECTION", Snackbar.LENGTH_SHORT).show();
+                            }
+                        }
+                    })
+                    .setActionTextColor(getResources().getColor(R.color.greenSuccess))
+                    .show();
+        }
+    }
 
     private void endBluetooth() {
         Snackbar.make(findViewById(R.id.nav_view), "EP Band", Snackbar.LENGTH_LONG)
                 .setAction("DISCONNECT", new View.OnClickListener() {
                     @Override
                     public void onClick(View view) {
-                        System.out.println("Disconnecting");
-                        if (disconnectSocket()) {
-                            socket = null;
-                            //Toast.makeText(MenuScreen.this, "DISCONNECTED", Toast.LENGTH_LONG).show();
-                            Snackbar.make(findViewById(R.id.nav_view), "DISCONNECTED", Snackbar.LENGTH_SHORT).show();
-                            mConnected = false;
-                        }
+                        BTservice.close();
+                        Snackbar.make(findViewById(R.id.nav_view), "DISCONNECTED", Snackbar.LENGTH_SHORT).show();
                     }
                 })
                 .setActionTextColor(getResources().getColor(R.color.colorAccent))
@@ -231,6 +305,7 @@ public class MenuScreen extends AppCompatActivity implements NavigationView.OnNa
 
     }
 
+    /*
     private boolean disconnectSocket() {
         closeStreams();
         if (socket.isConnected()) {
@@ -358,6 +433,7 @@ public class MenuScreen extends AppCompatActivity implements NavigationView.OnNa
             return null;
         }
     }
+    */
 
     @Override
     public void onBackPressed() {
@@ -382,7 +458,7 @@ public class MenuScreen extends AppCompatActivity implements NavigationView.OnNa
         //noinspection SimplifiableIfStatement
         switch (id) {
             case R.id.bluetooth_status:
-                String Message = (mConnected) ? "EP Band is Connected" : "No bluetooth connection";
+                String Message = (BTservice.isConnected()) ? "EP Band is Connected" : "No bluetooth connection";
                 Snackbar.make(findViewById(R.id.nav_view), Message, Snackbar.LENGTH_SHORT)
                         .setAction("CLOSE", new View.OnClickListener() {
                             @Override
@@ -418,7 +494,7 @@ public class MenuScreen extends AppCompatActivity implements NavigationView.OnNa
         switch (id) {
             case R.id.nav_device:
                 System.out.println("Menu: Device Setup");
-                if (socket == null) establishBluetooth();
+                if (!BTservice.isConnected()) establishBluetooth();
                 else endBluetooth();
                 //AppendFile("TestWorkout", "__A__");
                 //ReadFile("TestWorkout");
@@ -561,47 +637,6 @@ public class MenuScreen extends AppCompatActivity implements NavigationView.OnNa
             return null;
         }
     }
-
-    /**
-     * The Handler that gets information back from the BluetoothChatService
-     */
-    private final Handler mHandler = new Handler() {
-        @Override
-        public void handleMessage(Message msg) {
-            //FragmentActivity activity = getActivity();
-            switch (msg.what) {
-                case Constants.MESSAGE_STATE_CHANGE:
-
-                    break;
-                case Constants.MESSAGE_WRITE:
-                    byte[] writeBuf = (byte[]) msg.obj;
-                    // construct a string from the buffer
-                    String writeMessage = new String(writeBuf);
-                    //mConversationArrayAdapter.add("Me:  " + writeMessage);
-                    break;
-                case Constants.MESSAGE_READ:
-                    byte[] readBuf = (byte[]) msg.obj;
-                    // construct a string from the valid bytes in the buffer
-                    String readMessage = new String(readBuf, 0, msg.arg1);
-                    //mConversationArrayAdapter.add(mConnectedDeviceName + ":  " + readMessage);
-                    break;
-                case Constants.MESSAGE_DEVICE_NAME:
-                    // save the connected device's name
-                    //mConnectedDeviceName = msg.getData().getString(Constants.DEVICE_NAME);
-                    /*if (null != activity) {
-                        //Toast.makeText(activity, "Connected to "
-                                //+ mConnectedDeviceName, Toast.LENGTH_SHORT).show();
-                    }*/
-                    break;
-                case Constants.MESSAGE_TOAST:
-                    /*if (null != activity) {
-                        Toast.makeText(activity, msg.getData().getString(Constants.TOAST),
-                                Toast.LENGTH_SHORT).show();
-                    }*/
-                    break;
-            }
-        }
-    };
 
     @Override
     protected void onActivityResult ( int requestCode, int resultCode, Intent data) {
