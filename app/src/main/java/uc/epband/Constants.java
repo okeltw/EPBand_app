@@ -47,17 +47,24 @@ public interface Constants {
             ANAEROBIC = "Anaerobic",
             RAW_BPM = "RawBPM";
 
-        int     C_X = Color.parseColor("#FF0000"), // Red
-                C_Y = Color.parseColor("#008000"), // Blue
-                C_Z = Color.parseColor("#0000FF"), // Green
-                C_RX = Color.parseColor("#FF00FF"), // Pink
-                C_RY = Color.parseColor("#FFFF00"), // Yellow
-                C_RZ = Color.parseColor("#00FFFF"); // Cyan
+    int     C_X = Color.parseColor("#FF0000"), // Red
+            C_Y = Color.parseColor("#008000"), // Blue
+            C_Z = Color.parseColor("#0000FF"), // Green
+            C_RX = Color.parseColor("#FF00FF"), // Pink
+            C_RY = Color.parseColor("#FFFF00"), // Yellow
+            C_RZ = Color.parseColor("#00FFFF"); // Cyan
 
-        // Message types sent from the BluetoothBandService Handler
-        int     MESSAGE_STATE_CHANGE = 1,
-                MESSAGE_READ = 2,
-                MESSAGE_WRITE = 3,
-                MESSAGE_DEVICE_NAME = 4,
-                MESSAGE_TOAST = 5;
+    // Message types sent from the BluetoothBandService Handler
+    int     MESSAGE_STATE_CHANGE = 1,
+            MESSAGE_READ = 2,
+            MESSAGE_WRITE = 3,
+            MESSAGE_DEVICE_NAME = 4,
+            MESSAGE_TOAST = 5;
 }
+
+enum AXIS_OF_ROTATION{
+    AXIS_X,
+    AXIS_Y,
+    AXIS_Z
+}
+

@@ -17,10 +17,13 @@ import com.github.mikephil.charting.interfaces.datasets.ILineDataSet;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
+
+import java.lang.reflect.Array;
 import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import java.util.Vector;
 
 public class Exercise implements Constants{
     private Boolean mValid = false, mAnalyzed = false;
@@ -28,6 +31,7 @@ public class Exercise implements Constants{
     private Double mGoalROM, mAverageROM;
     private int mReps;
     private JSONArray mRotX, mRotY, mRotZ, mDistX, mDistY, mDistZ;
+    private int dataLen;
 
 
     public Exercise(){
@@ -74,6 +78,8 @@ public class Exercise implements Constants{
         mDistZ = jObject.getJSONArray(DIST_Z);
         mValid = jObject.getBoolean(VALID);
         mAnalyzed = jObject.getBoolean(ANALYZED);
+
+        dataLen = mRotX.length();
         return mValid;
     }
 
@@ -221,4 +227,80 @@ public class Exercise implements Constants{
         return dataset;
     }
 
+    public JSONArray GetmRotX(){ return this.mRotX; }
+    public double[] GetmRotXArray() throws JSONException{
+        double[] ret = new double[this.dataLen];
+        for (int i = 0; i < this.dataLen; i++) ret[i] = mRotX.getDouble(i);
+        return ret;
+    }
+
+    public JSONArray GetmRotY(){ return this.mRotY; }
+    public double[] GetmRotYArray() throws JSONException{
+        double[] ret = new double[this.dataLen];
+        for (int i = 0; i < this.dataLen; i++) ret[i] = mRotY.getDouble(i);
+        return ret;
+    }
+
+    public JSONArray GetmRotZ() { return this.mRotZ; }
+    public double[] GetmRotZArray() throws JSONException {
+        double[] ret = new double[this.dataLen];
+        for(int i = 0; i < this.dataLen; i++) ret[i] = mRotZ.getDouble(i);
+        return ret;
+    }
+
+    public int countReps(AXIS_OF_ROTATION axis, Boolean startLow){
+        int reps = 0;
+        double[] data;
+
+        // Extract the data, handling a potential JSON error by printing the stack trace.
+        // ATM, I do not know how to gracefully handle such an error.
+        // We may need to construct an error statement on the app
+        // and/or figure out how to recover
+        try {
+            switch (axis) {
+                case AXIS_X:
+                    data = this.GetmRotXArray();
+                    break;
+                case AXIS_Y:
+                    data = this.GetmRotYArray();
+                    break;
+                case AXIS_Z:
+                    data = this.GetmRotZArray();
+                    break;
+                default: // This is not possible, but initialize empty array to catch weirdness
+                    data = new double[0];
+                    break;
+            }
+        } catch (JSONException ex){
+            System.out.println("Could not read Java data.");
+            ex.printStackTrace();
+            return 0;
+        }
+
+        // Flag for direction
+        boolean upstroke = startLow;
+
+        // For each point of data
+        for (double point : data){
+            // If user was moving up previously, but the acceleration is now in a different direction...
+            if (upstroke && (point < 0)){
+                // Signal new direction
+                upstroke = false;
+
+                // If we started high, this change of direction marks a repetition.
+                if(!startLow)
+                    reps += 1;
+            }
+            // Same idea as last block
+            else if(!upstroke && (point > 0)) {
+                upstroke = true;
+                if(startLow)
+                    reps += 1;
+            }
+            // else the user is moving in the same direction, continue to the next point
+        }
+
+        // Return the count
+        return reps;
+    }
 }

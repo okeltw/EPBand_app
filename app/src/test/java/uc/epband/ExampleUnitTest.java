@@ -1,6 +1,7 @@
 package uc.epband;
 
 import org.junit.Test;
+import uc.epband.Calculus;
 
 import static org.junit.Assert.*;
 
