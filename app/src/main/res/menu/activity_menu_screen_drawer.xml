@@ -11,7 +11,7 @@
             android:id="@+id/nav_edit_workout"
             android:icon="@drawable/ic_note_add_24dp"
             android:title="Workout Templates"
-            android:visible="true"/>
+            android:visible="false"/>
 
         <item
             android:id="@+id/nav_profile"
@@ -20,11 +20,11 @@
         <item
             android:id="@+id/nav_review"
             android:icon="@drawable/ic_chart_24dp"
-            android:title="View Analysis" />
+            android:title="Review" />
         <item
             android:id="@+id/nav_workout_start"
-            android:icon="@drawable/ic_check_circle_24dp"
-            android:title="Start Workout" />
+            android:icon="@drawable/ic_add_24dp"
+            android:title="Workout" />
     </group>
 
 </menu>
