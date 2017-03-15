@@ -69,6 +69,7 @@ import java.util.List;
 import java.lang.Math;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.RunnableFuture;
 import java.util.concurrent.ThreadLocalRandom;
 import org.json.*;
 
@@ -77,7 +78,11 @@ public class MenuScreen extends AppCompatActivity implements NavigationView.OnNa
     //public String desiredDeviceName = "Andrew's iPhone";
 
     private Workout mWorkout;
+    private Exercise mExercise;
     private Context mContext;
+
+    private Set<String> messageQueue;
+    private boolean isWorkout = false;
 
     /*
     private BluetoothSocket socket = null;
@@ -101,6 +106,8 @@ public class MenuScreen extends AppCompatActivity implements NavigationView.OnNa
         @Override
         public void handleMessage(Message msg) {
             //FragmentActivity activity = getActivity();
+            //System.out.println("Handling message");
+            //System.out.print(msg.what);
             switch (msg.what) {
                 case Constants.MESSAGE_STATE_CHANGE:
 
@@ -112,10 +119,15 @@ public class MenuScreen extends AppCompatActivity implements NavigationView.OnNa
                     //mConversationArrayAdapter.add("Me:  " + writeMessage);
                     break;
                 case Constants.MESSAGE_READ:
+                    //System.out.println("Received message from bluetooth");
+
                     byte[] readBuf = (byte[]) msg.obj;
+
                     // construct a string from the valid bytes in the buffer
-                    String readMessage = new String(readBuf, 0, msg.arg1);
-                    //mConversationArrayAdapter.add(mConnectedDeviceName + ":  " + readMessage);
+                    if(isWorkout){
+                        messageQueue.add(new String(readBuf, 0, msg.arg1));
+                    }
+
                     break;
                 case Constants.MESSAGE_DEVICE_NAME:
                     // save the connected device's name
@@ -493,6 +505,7 @@ public class MenuScreen extends AppCompatActivity implements NavigationView.OnNa
 
         switch (id) {
             case R.id.nav_device:
+                isWorkout = false;
                 System.out.println("Menu: Device Setup");
                 if (!BTservice.isConnected()) establishBluetooth();
                 else endBluetooth();
@@ -504,6 +517,7 @@ public class MenuScreen extends AppCompatActivity implements NavigationView.OnNa
 
                 break;
             case R.id.nav_edit_workout:
+                isWorkout = false;
                 System.out.println("Menu: Workout Templates");
                 //bluetoothWrite("Hello World");
                 //bluetoothRead();
@@ -522,6 +536,7 @@ public class MenuScreen extends AppCompatActivity implements NavigationView.OnNa
 
                 break;
             case R.id.nav_profile:
+                isWorkout = false;
                 System.out.println("Menu: Profile");
                 Intent intent = new Intent(MenuScreen.this, ProfileActivity.class);
                 startActivity(intent);
@@ -529,6 +544,7 @@ public class MenuScreen extends AppCompatActivity implements NavigationView.OnNa
                 ListFiles();
                 break;
             case R.id.nav_review:
+                isWorkout = false;
                 System.out.println("Menu: View Analysis");
                 Intent intent_review = new Intent(MenuScreen.this, SelectWorkout.class);
                 String[] List = fileList();
@@ -546,9 +562,39 @@ public class MenuScreen extends AppCompatActivity implements NavigationView.OnNa
                 */
                 break;
             case R.id.nav_workout_start:
+                if(BTservice.isConnected()) {
+                    System.out.println("Menu: Start Workout");
+                } else {
+                    System.out.println("Bluetooth is not connected.");
+                    //TODO: make this visible in app
+                    break;
+                }
 
-                System.out.println("Menu: Start Workout");
-                mWorkout.getHeartRate().PlotAll((LineChart) findViewById(R.id.linechart));
+                mExercise = new Exercise();
+                new Thread(new Runnable(){
+                    public void run() {
+                        isWorkout = true;
+                        while(isWorkout){
+                            for(String dataPoint : messageQueue){
+                                try {
+                                    // TODO: figure out charting in different thread
+                                    System.out.println(dataPoint);
+
+                                    mExercise.UseJSONString(dataPoint);
+                                    mExercise.PlotAll((LineChart) findViewById(R.id.linechart));
+                                } catch(JSONException ex){
+                                    System.out.println("Caught JSONException");
+                                    ex.printStackTrace();
+                                }
+                            }
+                        }
+                        return;
+                    }
+                }
+
+                );
+
+                //mWorkout.getHeartRate().PlotAll((LineChart) findViewById(R.id.linechart));
                 break;
         }
         DrawerLayout drawer = (DrawerLayout) findViewById(R.id.drawer_layout);

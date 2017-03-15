@@ -38,7 +38,7 @@ public class BluetoothBandService {
 
     private ArrayList<String> mDeviceList = new ArrayList<String>();
     private Boolean mConnected = false;
-    public String desiredDeviceName = "Andrew's iPhone";
+    public String desiredDeviceName = "EPBand";
 
     // Create a BroadcastReceiver for ACTION_FOUND.
     private final BroadcastReceiver mReceiverBTDiscover = new BroadcastReceiver() {
@@ -88,11 +88,11 @@ public class BluetoothBandService {
     // Defines several constants used when transmitting messages between the
     // service and the UI.
     private interface MessageConstants {
-        public static final int MESSAGE_READ = 0;
-        public static final int MESSAGE_WRITE = 1;
-        public static final int MESSAGE_TOAST = 2;
+        public static final int MESSAGE_READ = Constants.MESSAGE_READ;
+        public static final int MESSAGE_WRITE = Constants.MESSAGE_WRITE;
+        public static final int MESSAGE_TOAST = Constants.MESSAGE_TOAST;
 
-        // ... (Add other message types here as needed.)
+        // ... (Add other message types here as neeed.)
     }
 
     /**
@@ -243,24 +243,39 @@ public class BluetoothBandService {
             mmOutStream = tmpOut;
         }
 
+        @Override
         public void run() {
             mmBuffer = new byte[1024];
+            mmBuffer[0] = (byte)0;
             int numBytes; // bytes returned from read()
+            Message readMsg;
 
             // Keep listening to the InputStream until an exception occurs.
             while (true) {
+
                 try {
-                    System.out.println("Attempt read from new thread");
+                    //System.out.println("Attempt read from new thread");
                     // Read from the InputStream.
                     numBytes = mmInStream.read(mmBuffer);
+
                     // Send the obtained bytes to the UI activity.
-                    Message readMsg = mHandler.obtainMessage(MessageConstants.MESSAGE_READ, numBytes, -1, mmBuffer);
+                    readMsg = mHandler.obtainMessage(MessageConstants.MESSAGE_READ, numBytes, -1, mmBuffer);
+
+
+                    // Debug
+                    //byte[] readBuf = (byte[]) readMsg.obj;
+                    //String mess = new String(readBuf, 0, readMsg.arg1);
+                    //System.out.println(mess);
+
+
                     readMsg.sendToTarget();
+
                 } catch (IOException e) {
                     System.out.println("Disconnected");
                     Log.d(TAG, "Input stream was disconnected", e);
                     break;
                 }
+
             }
         }
 
