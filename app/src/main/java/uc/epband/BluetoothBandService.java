@@ -114,6 +114,10 @@ public class BluetoothBandService implements Constants{
     public void close(){
         System.out.println("Closing BluetoothBandService.");
         disconnectSocket();
+    }
+
+    public void finalClose(){
+        close();
         mContext.unregisterReceiver(mReceiverBTDiscover);
         mContext.unregisterReceiver(mReceiverBTConnect);
     }

@@ -142,7 +142,7 @@ public class MenuScreen extends AppCompatActivity implements NavigationView.OnNa
 
     @Override
     protected void onDestroy() {
-        BTservice.close();
+        BTservice.finalClose();
         System.out.println("Destroyed EP Band");
         super.onDestroy();
     }
@@ -183,14 +183,7 @@ public class MenuScreen extends AppCompatActivity implements NavigationView.OnNa
         switch (id) {
             case R.id.bluetooth_status:
                 String Message = (BTservice.isConnected()) ? "EP Band is Connected" : "No bluetooth connection";
-                Snackbar.make(findViewById(R.id.nav_view), Message, Snackbar.LENGTH_SHORT)
-                        .setAction("CLOSE", new View.OnClickListener() {
-                            @Override
-                            public void onClick(View view) {
-                            }
-                        })
-                        .setActionTextColor(getResources().getColor(R.color.colorAccent))
-                        .show();
+                Toast.makeText(this,Message,Toast.LENGTH_SHORT).show();
                 break;
             case R.id.delete_files:
                 Snackbar.make(findViewById(R.id.nav_view), "Delete all saved files?", Snackbar.LENGTH_SHORT)
