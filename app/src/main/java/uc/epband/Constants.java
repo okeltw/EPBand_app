@@ -1,5 +1,6 @@
 package uc.epband;
 
+import android.content.Context;
 import android.graphics.Color;
 
 import java.text.DateFormat;
@@ -15,6 +16,15 @@ public interface Constants {
     float       HR_ANAEROBIC = 0.80f,
                 HR_AEROBIC = 0.70f,
                 HR_REST = 0.60f;
+
+    final String
+            BICEP_CURL = "Bicep Curl",
+            SIDE_RAISE = "Side Raise",
+            FRONT_RAISE = "Front Raise",
+            SQUAT = "Back Squat",
+            POWER_CLEAN = "Power Clean";
+
+    String[] ExerciseList = {BICEP_CURL, SIDE_RAISE, FRONT_RAISE, SQUAT, POWER_CLEAN};
 
     //JSON TAG STRINGS
     String  /*Workout String*/
@@ -47,6 +57,14 @@ public interface Constants {
             ANAEROBIC = "Anaerobic",
             RAW_BPM = "RawBPM";
 
+    String
+        HEX_MIDNIGHT = "#1F2939",
+        HEX_Gumbo = "#6F9489",
+        HEX_Dodger_Blue = "#339FF2",
+        HEX_RUBY = "#D40A68",
+        HEX_MALACHITE = "#07D05A";
+
+
     int     C_X = Color.parseColor("#FF0000"), // Red
             C_Y = Color.parseColor("#008000"), // Blue
             C_Z = Color.parseColor("#0000FF"), // Green
@@ -60,11 +78,14 @@ public interface Constants {
             MESSAGE_WRITE = 3,
             MESSAGE_DEVICE_NAME = 4,
             MESSAGE_TOAST = 5;
+
+    String TOAST = "toast", DEVICE_NAME = "Andrew's iPhone";
+
+    enum AXIS_OF_ROTATION{
+        AXIS_X,
+        AXIS_Y,
+        AXIS_Z
+    }
 }
 
-enum AXIS_OF_ROTATION{
-    AXIS_X,
-    AXIS_Y,
-    AXIS_Z
-}
 

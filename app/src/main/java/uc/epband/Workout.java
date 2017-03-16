@@ -10,6 +10,9 @@ import java.util.Date;
 
 import android.content.Context;
 
+import com.github.mikephil.charting.charts.LineChart;
+import com.github.mikephil.charting.charts.PieChart;
+
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -76,13 +79,14 @@ public class Workout implements Constants{
         String filename = NewFilename(mFilename);
         JSONObject jObject = getContentJSON();
         writeFile(filename, jObject.toString());
+        System.out.println(readFile(filename));
     }
 
     private JSONObject getContentJSON() throws JSONException{
         JSONObject jObject = new JSONObject();
         jObject.put(TIME_STAMP,mTimeStamp);
         jObject.put(MOTION,mMotion.GetJSONObject());
-        jObject.put(HEART_RATE,mHeartRate.GetJSONObject());
+        jObject.put(HEART_RATE, mHeartRate.GetJSONObject());
         return jObject;
     }
 
@@ -116,6 +120,23 @@ public class Workout implements Constants{
         FileOutputStream f = mContext.openFileOutput(filename, Context.MODE_APPEND);
         f.write(message.getBytes());
         f.close();
+    }
+
+    public void plotHeartRateRealTime(LineChart chart){
+        if(!mHeartRate.equals(null)) mHeartRate.PlotAll(chart);
+    }
+
+    public void plotHeartRateSummary(PieChart chart){
+        if(!mHeartRate.equals(null)) mHeartRate.PlotSummary(chart);
+    }
+
+    public void plotMotionRealTime(LineChart chart){
+        if(mMotion == null) return;
+    }
+
+    public void plotMotionSummary(PieChart chart){
+        System.out.println("Motion Summary not implemented");
+        if(mMotion == null) return;
     }
 
 }

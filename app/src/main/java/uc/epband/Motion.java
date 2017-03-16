@@ -8,7 +8,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class Motion implements Constants{
-    private JSONArray mExerciseData;
+    public JSONArray mExerciseData;
 
     public Motion(){
         mExerciseData = new JSONArray();
@@ -44,6 +44,16 @@ public class Motion implements Constants{
             Exercises.add(mExerciseData.getJSONObject(i).getString(EXERCISE));
         }
         return Exercises;
+    }
+
+    public Exercise GetExerciseDataCopy(int index){
+        try{
+            Exercise exercise = new Exercise(mExerciseData.getJSONObject(index));
+            return exercise;
+        }
+        catch(JSONException ex){
+            return new Exercise();
+        }
     }
 
     public void AddExerciseData(Exercise exercise) throws JSONException{

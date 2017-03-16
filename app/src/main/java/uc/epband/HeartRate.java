@@ -14,6 +14,7 @@ import com.github.mikephil.charting.data.LineDataSet;
 import com.github.mikephil.charting.data.PieData;
 import com.github.mikephil.charting.data.PieDataSet;
 import com.github.mikephil.charting.data.PieEntry;
+import com.github.mikephil.charting.formatter.PercentFormatter;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -111,6 +112,7 @@ public class HeartRate implements Constants{
         mAerobic = 0;
         mUnread = 0;
 
+        System.out.println("Heart Rate Summary of " + mRawBPM.length() + " points\n" + mRawBPM);
         double value;
         for(int i = 0; i < mRawBPM.length(); i++){
             value = mRawBPM.getInt(i);
@@ -128,6 +130,7 @@ public class HeartRate implements Constants{
             }
         }
         mValid = true;
+        mAnalyzed = true;
     }
 
     public void PlotAll(LineChart chart) {
@@ -141,7 +144,7 @@ public class HeartRate implements Constants{
         }
 
         // VISIBILITY ON
-        chart.setVisibility(View.VISIBLE);
+        //chart.setVisibility(View.VISIBLE);
 
         // CREATE DATA
         LineDataSet dataSet = new LineDataSet(entries, "Line Graph");
@@ -164,6 +167,11 @@ public class HeartRate implements Constants{
         x.setAxisMaximum(entries.size());
         y.setAxisMaximum(220.0f);
         y.setAxisMinimum(0.0f);
+        y.setDrawLabels(true);
+        y.setLabelCount(5, true);
+        y.setTextColor(Color.WHITE);
+        y.setGranularity(40.0f);
+
         //chart.getAxisLeft().setDrawTopYLabelEntry(true);
         chart.getAxisLeft().setEnabled(false);
 
@@ -179,12 +187,18 @@ public class HeartRate implements Constants{
 
     public void PlotSummary(PieChart chart) {
         // VISIBILITY ON
-        chart.setVisibility(View.VISIBLE);
+        //chart.setVisibility(View.VISIBLE);
+        try{
+            if(mAnalyzed == false) CalculateSummary(220);
+        }
+        catch (JSONException ex){
+            System.out.println("JSONException during HeartRate Summary Calculation");
+        }
 
         // CREATE DATA
         List<PieEntry> entries = new ArrayList<>();
-        entries.add(new PieEntry((float)mUnread, "Unread (0% - 60% MHR)"));
-        entries.add(new PieEntry((float)mRest, "Resting (60% - 70% MHR)"));
+        entries.add(new PieEntry((float)mUnread, "Resting (0% - 60% MHR)"));
+        entries.add(new PieEntry((float)mRest, "Recovery (60% - 70% MHR)"));
         entries.add(new PieEntry((float)mAerobic, "Aerobic (70% - 80% MHR)"));
         entries.add(new PieEntry((float) mAnaerobic, "Anaerobic (80% - 100% MHR)"));
         PieDataSet set = new PieDataSet(entries, "Heart Rate Levels as Percent of Time");
@@ -198,6 +212,8 @@ public class HeartRate implements Constants{
         chart.setUsePercentValues(true);
         chart.setHoleRadius(0f);
         chart.setTransparentCircleAlpha(0);
+
+        data.setValueFormatter(new PercentFormatter());
 
         // Don't use labels on chart
         chart.setDrawEntryLabels(false);

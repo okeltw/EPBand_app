@@ -4,7 +4,7 @@
 
     <item
         android:id="@+id/delete_files"
-        android:orderInCategory="100"
+        android:orderInCategory="98"
         android:title="@string/delete_files"
         app:showAsAction="never" />
 
@@ -15,11 +15,34 @@
         app:showAsAction="never" />
 
     <item
+        android:id="@+id/workout2"
+        android:orderInCategory="100"
+        android:title="@string/workout2"
+        app:showAsAction="never" />
+
+    <item
         android:id="@+id/bluetooth_status"
-        android:orderInCategory="1"
+        android:orderInCategory="3"
         android:title="Bluetooth"
         app:showAsAction="always"
         android:icon="@drawable/ic_bluetooth_24dp"
         android:visible="true" />
+
+    <item
+        android:id="@+id/time_toggle"
+        android:orderInCategory="2"
+        android:title="Toggle Time"
+        app:showAsAction="always"
+        android:icon="@drawable/ic_timer"
+        android:visible="true" />
+
+    <item
+        android:id="@+id/graph_toggle"
+        android:orderInCategory="1"
+        android:title="Toggle Graph"
+        app:showAsAction="always"
+        android:icon="@drawable/ic_chart_24dp"
+        android:visible="true" />
+
 
 </menu>
