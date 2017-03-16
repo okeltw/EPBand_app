@@ -19,11 +19,14 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.lang.reflect.Array;
+import java.text.DateFormat;
 import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Vector;
+
+import static uc.epband.Constants.MOTION;
 
 public class Exercise implements Constants{
     private Boolean mValid = false, mAnalyzed = false;
@@ -32,6 +35,17 @@ public class Exercise implements Constants{
     private int mReps;
     private JSONArray mRotX, mRotY, mRotZ, mDistX, mDistY, mDistZ;
     private int dataLen;
+
+    private String  defaultExercise = "default",
+                    defaultStartTime = DateFormat.getDateTimeInstance().format(new Date()),
+                    defaultTimeLength = "0.1", //I don't know how this is formatted
+                    defaultSampleStep = "0.1";
+    private Double  defaultGoalROM = 0.8,
+                    defaultAverageROM = 0.0;
+    private int     defaultmReps = 0;
+    private Boolean defaultmValid = true,
+                    defaultmAnalyzed = false;
+
 
 
     public Exercise(){
@@ -61,8 +75,8 @@ public class Exercise implements Constants{
     }
 
     public Boolean UseJSONObject(JSONObject jObject) throws JSONException {
+        jObject = Prepare(jObject);
         mValid = false;
-        mAnalyzed = jObject.getBoolean(ANALYZED);
         mExercise = jObject.getString(EXERCISE);
         mStartTime = jObject.getString(START_TIME);
         mTimeLength = jObject.getString(TIME_LENGTH);
@@ -70,17 +84,35 @@ public class Exercise implements Constants{
         mGoalROM = jObject.getDouble(GOAL_ROM);
         mAverageROM = jObject.getDouble(AVG_ROM);
         mReps = jObject.getInt(REPS);
-        mRotX = jObject.getJSONArray(ROT_X);
-        mRotY = jObject.getJSONArray(ROT_Y);
-        mRotZ = jObject.getJSONArray(ROT_Z);
-        mDistX = jObject.getJSONArray(DIST_X);
-        mDistY = jObject.getJSONArray(DIST_Y);
-        mDistZ = jObject.getJSONArray(DIST_Z);
+
+        JSONObject motion = jObject.getJSONObject(MOTION);
+        mRotX = motion.getJSONArray(ROT_X);
+        mRotY = motion.getJSONArray(ROT_Y);
+        mRotZ = motion.getJSONArray(ROT_Z);
+        mDistX = motion.getJSONArray(DIST_X);
+        mDistY = motion.getJSONArray(DIST_Y);
+        mDistZ = motion.getJSONArray(DIST_Z);
+
         mValid = jObject.getBoolean(VALID);
         mAnalyzed = jObject.getBoolean(ANALYZED);
 
+
         dataLen = mRotX.length();
         return mValid;
+    }
+
+    public JSONObject Prepare(JSONObject jObject) throws JSONException{
+        if(!jObject.has(EXERCISE))      jObject.put(EXERCISE, defaultExercise);
+        if(!jObject.has(START_TIME))    jObject.put(START_TIME, defaultStartTime);
+        if(!jObject.has(TIME_LENGTH))   jObject.put(TIME_LENGTH, defaultTimeLength);
+        if(!jObject.has(SAMPLE_STEP))   jObject.put(SAMPLE_STEP, defaultSampleStep);
+        if(!jObject.has(GOAL_ROM))      jObject.put(GOAL_ROM, defaultGoalROM);
+        if(!jObject.has(AVG_ROM))       jObject.put(AVG_ROM, defaultAverageROM);
+        if(!jObject.has(REPS))          jObject.put(REPS, defaultmReps);
+        if(!jObject.has(VALID))         jObject.put(VALID, defaultmValid);
+        if(!jObject.has(ANALYZED))      jObject.put(ANALYZED, defaultmAnalyzed);
+
+        return jObject;
     }
 
     public String getName(){
@@ -110,6 +142,30 @@ public class Exercise implements Constants{
     public String GetJSONString() throws JSONException{
         JSONObject jObject = GetJSONObject();
         return jObject.toString();
+    }
+
+    public void AddStringData(String jString) throws JSONException{
+        JSONObject jObject = new JSONObject(jString);
+        AddJSONData(jObject);
+    }
+
+    public void AddJSONData(JSONObject jObject) throws JSONException{
+        JSONObject motion = jObject.getJSONObject(MOTION);
+        JSONArray   dX = motion.getJSONArray(DIST_X),
+                    dY = motion.getJSONArray(DIST_Y),
+                    dZ = motion.getJSONArray(DIST_Z),
+                    rX = motion.getJSONArray(ROT_X),
+                    rY = motion.getJSONArray(ROT_Y),
+                    rZ = motion.getJSONArray(ROT_Z);
+
+        for(int index = 0; index < dX.length(); index++){
+            AddData(dX.getDouble(index),
+                    dY.getDouble(index),
+                    dZ.getDouble(index),
+                    rX.getDouble(index),
+                    rY.getDouble(index),
+                    rZ.getDouble(index));
+        }
     }
 
     public void AddData(double distX, double distY, double distZ, double rotX, double rotY, double rotZ) throws JSONException{

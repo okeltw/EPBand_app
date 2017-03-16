@@ -78,11 +78,12 @@ public class MenuScreen extends AppCompatActivity implements NavigationView.OnNa
     //public String desiredDeviceName = "Andrew's iPhone";
 
     private Workout mWorkout;
-    private Exercise mExercise;
+    private Exercise mExercise = new Exercise();
     private Context mContext;
 
     private Set<String> messageQueue;
     private boolean isWorkout = false;
+
 
     /*
     private BluetoothSocket socket = null;
@@ -124,8 +125,17 @@ public class MenuScreen extends AppCompatActivity implements NavigationView.OnNa
                     byte[] readBuf = (byte[]) msg.obj;
 
                     // construct a string from the valid bytes in the buffer
-                    if(isWorkout){
-                        messageQueue.add(new String(readBuf, 0, msg.arg1));
+                    try {
+                        String str = new String(readBuf, 0, msg.arg1);
+                        System.out.println(str);
+                        mExercise.AddStringData(str);
+
+                        if (isWorkout) {
+                            mExercise.PlotAll((LineChart) findViewById(R.id.linechart));
+                        }
+                    } catch(JSONException ex){
+                        System.out.println("[mHandler] Error Adding/Plotting exercise data");
+                        ex.printStackTrace();
                     }
 
                     break;
@@ -146,6 +156,8 @@ public class MenuScreen extends AppCompatActivity implements NavigationView.OnNa
             }
         }
     };
+
+    private Handler gHandler;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -193,6 +205,7 @@ public class MenuScreen extends AppCompatActivity implements NavigationView.OnNa
         */
 
         BTservice = new BluetoothBandService(mContext, mHandler);
+
 
         hideAllCharts();
         System.out.println("Created App");
@@ -569,30 +582,8 @@ public class MenuScreen extends AppCompatActivity implements NavigationView.OnNa
                     //TODO: make this visible in app
                     break;
                 }
-
+                isWorkout = true;
                 mExercise = new Exercise();
-                new Thread(new Runnable(){
-                    public void run() {
-                        isWorkout = true;
-                        while(isWorkout){
-                            for(String dataPoint : messageQueue){
-                                try {
-                                    // TODO: figure out charting in different thread
-                                    System.out.println(dataPoint);
-
-                                    mExercise.UseJSONString(dataPoint);
-                                    mExercise.PlotAll((LineChart) findViewById(R.id.linechart));
-                                } catch(JSONException ex){
-                                    System.out.println("Caught JSONException");
-                                    ex.printStackTrace();
-                                }
-                            }
-                        }
-                        return;
-                    }
-                }
-
-                );
 
                 //mWorkout.getHeartRate().PlotAll((LineChart) findViewById(R.id.linechart));
                 break;
