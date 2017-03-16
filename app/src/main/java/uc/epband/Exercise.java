@@ -7,6 +7,7 @@ import android.view.View;
 import com.github.mikephil.charting.charts.LineChart;
 import com.github.mikephil.charting.components.Legend;
 import com.github.mikephil.charting.components.LegendEntry;
+import com.github.mikephil.charting.components.LimitLine;
 import com.github.mikephil.charting.components.XAxis;
 import com.github.mikephil.charting.components.YAxis;
 import com.github.mikephil.charting.data.Entry;
@@ -26,8 +27,8 @@ import java.util.List;
 import java.util.Vector;
 
 public class Exercise implements Constants{
-    private Boolean mValid = false, mAnalyzed = false;
-    private String mExercise, mStartTime, mTimeLength, mSampleStep;
+    private Boolean mValid, mAnalyzed;
+    public String mExercise, mStartTime, mTimeLength, mSampleStep;
     private Double mGoalROM, mAverageROM;
     private int mReps;
     private JSONArray mRotX, mRotY, mRotZ, mDistX, mDistY, mDistZ;
@@ -35,6 +36,12 @@ public class Exercise implements Constants{
 
 
     public Exercise(){
+        mValid = false;
+        mAnalyzed = false;
+        mExercise = "";
+        mStartTime = "";
+        mTimeLength = "";
+        mSampleStep = "";
         mRotX = new JSONArray();
         mRotY = new JSONArray();
         mRotZ = new JSONArray();
@@ -44,6 +51,8 @@ public class Exercise implements Constants{
         mReps = 0;
         mGoalROM = 0.8;
         mAverageROM = 0.0;
+
+        SetStartTime(new Date());
     }
 
     public Exercise(String jString) throws JSONException{
@@ -61,7 +70,28 @@ public class Exercise implements Constants{
     }
 
     public Boolean UseJSONObject(JSONObject jObject) throws JSONException {
-        mValid = false;
+        ImportData(jObject);
+        System.out.println("Used JSON Object to get ImportData");
+        try {
+            ImportExtra(jObject);
+            System.out.println("Used JSON Object to get ImportExtra");
+        }catch(JSONException ex){
+            System.out.println("Couldn't get ImportExtra");
+        }
+        return mValid;
+    }
+
+    private void ImportData(JSONObject jObject) throws JSONException{
+        mRotX = jObject.getJSONArray(ROT_X);
+        mRotY = jObject.getJSONArray(ROT_Y);
+        mRotZ = jObject.getJSONArray(ROT_Z);
+        mDistX = jObject.getJSONArray(DIST_X);
+        mDistY = jObject.getJSONArray(DIST_Y);
+        mDistZ = jObject.getJSONArray(DIST_Z);
+        dataLen = mRotX.length();
+    }
+
+    private void ImportExtra(JSONObject jObject) throws JSONException {
         mAnalyzed = jObject.getBoolean(ANALYZED);
         mExercise = jObject.getString(EXERCISE);
         mStartTime = jObject.getString(START_TIME);
@@ -70,17 +100,8 @@ public class Exercise implements Constants{
         mGoalROM = jObject.getDouble(GOAL_ROM);
         mAverageROM = jObject.getDouble(AVG_ROM);
         mReps = jObject.getInt(REPS);
-        mRotX = jObject.getJSONArray(ROT_X);
-        mRotY = jObject.getJSONArray(ROT_Y);
-        mRotZ = jObject.getJSONArray(ROT_Z);
-        mDistX = jObject.getJSONArray(DIST_X);
-        mDistY = jObject.getJSONArray(DIST_Y);
-        mDistZ = jObject.getJSONArray(DIST_Z);
         mValid = jObject.getBoolean(VALID);
         mAnalyzed = jObject.getBoolean(ANALYZED);
-
-        dataLen = mRotX.length();
-        return mValid;
     }
 
     public String getName(){
@@ -177,12 +198,13 @@ public class Exercise implements Constants{
         ArrayList<ILineDataSet> lines = new ArrayList<> ();
         ArrayList<Entry> dX = GetDataset(mDistX), dY = GetDataset(mDistY), dZ = GetDataset(mDistZ),
                         rX = GetDataset(mRotX), rY = GetDataset(mRotY), rZ = GetDataset(mRotZ);
-        lines = MultipleLines(lines, dX, "X Distance", C_X);
-        lines = MultipleLines(lines, dY, "Y Distance", C_Y);
-        lines = MultipleLines(lines, dZ, "Z Distance", C_Z);
-        lines = MultipleLines(lines, rX, "X Angle", C_RX);
-        lines = MultipleLines(lines, rY, "Y Angle", C_RY);
-        lines = MultipleLines(lines, rZ, "Z Angle", C_RZ);
+
+        lines = MultipleLines(lines, dX, "X Distance", C_X, YAxis.AxisDependency.LEFT);
+        lines = MultipleLines(lines, dY, "Y Distance", C_Y, YAxis.AxisDependency.LEFT);
+        lines = MultipleLines(lines, dZ, "Z Distance", C_Z, YAxis.AxisDependency.LEFT);
+        lines = MultipleLines(lines, rX, "X Angle", C_RX, YAxis.AxisDependency.RIGHT);
+        lines = MultipleLines(lines, rY, "Y Angle", C_RY, YAxis.AxisDependency.RIGHT);
+        lines = MultipleLines(lines, rZ, "Z Angle", C_RZ, YAxis.AxisDependency.RIGHT);
 
         Legend legend = chart.getLegend();
         legend.setEnabled(true);
@@ -190,7 +212,6 @@ public class Exercise implements Constants{
         legend.setWordWrapEnabled(true);
 
         chart.setVisibility(View.VISIBLE);
-        chart.invalidate();
         chart.setPinchZoom(false);
         chart.setDoubleTapToZoomEnabled(false);
         chart.setDragEnabled(false);
@@ -203,18 +224,63 @@ public class Exercise implements Constants{
         x.setAxisMaximum(dX.size());
 
         YAxis yDist = chart.getAxisLeft();
-        YAxis yRot = chart.getAxisRight();
-        yDist.setAxisMinimum(-180.0f);
-        yDist.setAxisMaximum(180.0f);
+        yDist.removeAllLimitLines();
+        yDist.setDrawLimitLinesBehindData(true);
+        yDist.resetAxisMaximum();
+        yDist.resetAxisMinimum();
+        yDist.setDrawZeroLine(true);
+        yDist.setDrawLabels(true);
 
+        YAxis yRot = chart.getAxisRight();
+        yRot.removeAllLimitLines();
+        yRot.setDrawLimitLinesBehindData(true);
+        yRot.setAxisMinimum(-180.0f);
+        yRot.setAxisMaximum(180.0f);
+        yRot.setDrawZeroLine(true);
+        yRot.setDrawLabels(true);
+        yRot.setLabelCount(9, true);
+
+        /*
+        LimitLine[] lLine = getLimitLine(90.0f,0.0f,80.0f,"Shoulder Raise");
+        yRot.addLimitLine(lLine[0]);
+        yRot.addLimitLine(lLine[1]);
+        yRot.addLimitLine(lLine[2]);
+        */
+        System.out.println("Chart setData()");
         chart.setData(new LineData(lines));
+        chart.invalidate();
+        System.out.println("End plotAll()");
+
     }
 
-    public ArrayList<ILineDataSet> MultipleLines(ArrayList<ILineDataSet> dataset, ArrayList<Entry> line, String name, int color){
+    public LimitLine[] getLimitLine(float goal, float minimum, float tolerancePercent, String label){
+        if(tolerancePercent > 1.0) tolerancePercent = tolerancePercent/100.0f;
+        LimitLine[] returnLines = new LimitLine[3];
+        returnLines[0] = new LimitLine(goal*tolerancePercent);
+        returnLines[0].setLineColor(Color.RED);
+        returnLines[0].enableDashedLine(12.0f, 12.0f,1.0f);
+        //returnLines[0].setLineWidth(1f);
+
+        returnLines[1] = new LimitLine(goal, label);
+        returnLines[1].setLineColor(Color.BLACK);
+        returnLines[1].setTextColor(Color.WHITE);
+        returnLines[1].setLineWidth(1f);
+        returnLines[1].setTextSize(14f);
+
+        returnLines[2] = new LimitLine(goal*(2f-tolerancePercent));
+        returnLines[2].setLineColor(Color.RED);
+        returnLines[2].enableDashedLine(12.0f, 12.0f,1.0f);
+        //returnLines[2].setLineWidth(1f);
+
+        return returnLines;
+    }
+
+    public ArrayList<ILineDataSet> MultipleLines(ArrayList<ILineDataSet> dataset, ArrayList<Entry> line, String name, int color, YAxis.AxisDependency axis){
         LineDataSet newLineData = new LineDataSet(line, name);
         newLineData.setColor(color);
         newLineData.setCircleColor(color);
         newLineData.setCircleColorHole(color);
+        newLineData.setAxisDependency(axis);
         dataset.add(newLineData);
         return dataset;
     }

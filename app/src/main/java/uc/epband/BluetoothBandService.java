@@ -22,7 +22,7 @@ import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Set;
 
-public class BluetoothBandService {
+public class BluetoothBandService implements Constants{
     private static final String TAG = "MY_APP_DEBUG_TAG";
     private Handler mHandler; // handler that gets info from Bluetooth service
 
@@ -87,13 +87,6 @@ public class BluetoothBandService {
 
     // Defines several constants used when transmitting messages between the
     // service and the UI.
-    private interface MessageConstants {
-        public static final int MESSAGE_READ = 0;
-        public static final int MESSAGE_WRITE = 1;
-        public static final int MESSAGE_TOAST = 2;
-
-        // ... (Add other message types here as needed.)
-    }
 
     /**
      * Constructor. Prepares a new BluetoothChat session.
@@ -254,7 +247,7 @@ public class BluetoothBandService {
                     // Read from the InputStream.
                     numBytes = mmInStream.read(mmBuffer);
                     // Send the obtained bytes to the UI activity.
-                    Message readMsg = mHandler.obtainMessage(MessageConstants.MESSAGE_READ, numBytes, -1, mmBuffer);
+                    Message readMsg = mHandler.obtainMessage(Constants.MESSAGE_READ, numBytes, -1, mmBuffer);
                     readMsg.sendToTarget();
                 } catch (IOException e) {
                     System.out.println("Disconnected");
@@ -270,13 +263,13 @@ public class BluetoothBandService {
                 mmOutStream.write(bytes);
 
                 // Share the sent message with the UI activity.
-                Message writtenMsg = mHandler.obtainMessage(MessageConstants.MESSAGE_WRITE, -1, -1, mmBuffer);
+                Message writtenMsg = mHandler.obtainMessage(Constants.MESSAGE_WRITE, -1, -1, mmBuffer);
                 writtenMsg.sendToTarget();
             } catch (IOException e) {
                 Log.e(TAG, "Error occurred when sending data", e);
 
                 // Send a failure message back to the activity.
-                Message writeErrorMsg = mHandler.obtainMessage(MessageConstants.MESSAGE_TOAST);
+                Message writeErrorMsg = mHandler.obtainMessage(Constants.MESSAGE_TOAST);
                 Bundle bundle = new Bundle();
                 bundle.putString("toast", "Couldn't send data to the other device");
                 writeErrorMsg.setData(bundle);

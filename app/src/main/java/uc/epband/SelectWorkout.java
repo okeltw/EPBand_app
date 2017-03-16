@@ -24,7 +24,9 @@ public class SelectWorkout extends AppCompatActivity {
         setSupportActionBar(toolbar);
 
         Intent start_intent = getIntent();
-        final String[] List = start_intent.getStringArrayExtra("Files");
+        final String[] List = start_intent.getStringArrayExtra("ListData");
+        final String Title = start_intent.getStringExtra("Title");
+        setTitle(Title);
 
         ArrayAdapter<String> adapter = new ArrayAdapter<String>(this, android.R.layout.simple_list_item_1, List);
         final ListView WorkoutList = (ListView) findViewById(R.id.workoutList);
@@ -37,10 +39,12 @@ public class SelectWorkout extends AppCompatActivity {
                 int item = WorkoutList.getCheckedItemPosition();
                 if(item == ListView.INVALID_POSITION){
                     returnIntent.putExtra("result", "");
+                    returnIntent.putExtra("index", -1);
                     setResult(Activity.RESULT_CANCELED, returnIntent);
                 }else{
                     String filename = List[item];
                     returnIntent.putExtra("result", filename);
+                    returnIntent.putExtra("index", item);
                     setResult(Activity.RESULT_OK, returnIntent);
                 }
                 finish();

@@ -2,31 +2,14 @@ package uc.epband;
 
 import android.Manifest;
 import android.app.Activity;
-import android.app.Application;
-import android.app.FragmentManager;
-import android.app.FragmentTransaction;
-import android.bluetooth.BluetoothAdapter;
-import android.bluetooth.BluetoothDevice;
-import android.bluetooth.BluetoothManager;
-import android.bluetooth.BluetoothProfile;
-import android.bluetooth.BluetoothSocket;
-import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
-import android.content.IntentFilter;
 import android.content.SharedPreferences;
-import android.graphics.Color;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
-import android.os.ParcelUuid;
-import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.Snackbar;
 import android.support.v4.app.ActivityCompat;
-import android.support.v4.app.FragmentActivity;
-import android.text.format.DateUtils;
-import android.util.JsonReader;
-import android.util.Log;
 import android.view.View;
 import android.support.design.widget.NavigationView;
 import android.support.v4.view.GravityCompat;
@@ -36,66 +19,49 @@ import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
 import android.view.Menu;
 import android.view.MenuItem;
-import android.widget.ArrayAdapter;
-import android.widget.ImageView;
 import android.widget.Toast;
 
-import com.github.mikephil.charting.charts.BarChart;
 import com.github.mikephil.charting.charts.LineChart;
 import com.github.mikephil.charting.charts.PieChart;
-import com.github.mikephil.charting.components.Description;
-import com.github.mikephil.charting.components.Legend;
-import com.github.mikephil.charting.data.Entry;
-import com.github.mikephil.charting.data.LineData;
-import com.github.mikephil.charting.data.LineDataSet;
-import com.github.mikephil.charting.data.PieData;
-import com.github.mikephil.charting.data.PieDataSet;
-import com.github.mikephil.charting.data.PieEntry;
 
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
-import java.io.PrintStream;
-import java.lang.reflect.Method;
-import java.text.DateFormat;
-import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
 import java.lang.Math;
-import java.util.Set;
-import java.util.UUID;
-import java.util.concurrent.ThreadLocalRandom;
 import org.json.*;
 
 public class MenuScreen extends AppCompatActivity implements NavigationView.OnNavigationItemSelectedListener {
+    private Workout mWorkout = null;
+    private HeartRate mHeartRate = null;
+    private Motion mMotion = null;
+    private Exercise mExercise = null;
 
-    //public String desiredDeviceName = "Andrew's iPhone";
+    public enum workoutState{
+        WORKOUT, REVIEW, NONE
+    }
+    private workoutState mWorkoutInProgress;
 
-    private Workout mWorkout;
+    public enum graphState{
+        HEARTRATE_REALTIME, HEARTRATE_SUMMARY, MOTION_REALTIME, MOTION_SUMMARY
+    }
+    private graphState mGraphState;
+    private LineChart mLineChart;
+    private PieChart mPieChart;
+
     private Context mContext;
 
-    /*
-    private BluetoothSocket socket = null;
-    private OutputStream outputStream = null;
-    private InputStream inStream = null;
-
-    private ArrayList<String> mDeviceList = new ArrayList<String>();
-    private BluetoothAdapter mBluetoothAdapter;
-    private Boolean mConnected = false;
-    */
-
     //RETURN CODES
-    private int SELECT_WORKOUT = 1;
+    private final int SELECT_WORKOUT = 1, SELECT_EXERCISE = 2, REVIEW_EXERCISE = 3;
 
     private BluetoothBandService BTservice;
 
     /**
-     * The Handler that gets information back from the BluetoothChatService
+     * The Handler that gets information back from the BluetoothBandService
      */
     private final Handler mHandler = new Handler() {
         @Override
@@ -109,27 +75,27 @@ public class MenuScreen extends AppCompatActivity implements NavigationView.OnNa
                     byte[] writeBuf = (byte[]) msg.obj;
                     // construct a string from the buffer
                     String writeMessage = new String(writeBuf);
+                    System.out.println("Write: " + writeMessage);
                     //mConversationArrayAdapter.add("Me:  " + writeMessage);
                     break;
                 case Constants.MESSAGE_READ:
                     byte[] readBuf = (byte[]) msg.obj;
                     // construct a string from the valid bytes in the buffer
                     String readMessage = new String(readBuf, 0, msg.arg1);
+                    System.out.println("Read: " + readMessage);
                     //mConversationArrayAdapter.add(mConnectedDeviceName + ":  " + readMessage);
                     break;
                 case Constants.MESSAGE_DEVICE_NAME:
                     // save the connected device's name
-                    //mConnectedDeviceName = msg.getData().getString(Constants.DEVICE_NAME);
-                    /*if (null != activity) {
-                        //Toast.makeText(activity, "Connected to "
-                                //+ mConnectedDeviceName, Toast.LENGTH_SHORT).show();
-                    }*/
+                    String mConnectedDeviceName = msg.getData().getString(Constants.DEVICE_NAME);
+                    if (null != mContext) {
+                        Toast.makeText(mContext, "Connected to "+ mConnectedDeviceName, Toast.LENGTH_SHORT).show();
+                    }
                     break;
                 case Constants.MESSAGE_TOAST:
-                    /*if (null != activity) {
-                        Toast.makeText(activity, msg.getData().getString(Constants.TOAST),
-                                Toast.LENGTH_SHORT).show();
-                    }*/
+                    if (null != mContext) {
+                        Toast.makeText(mContext, msg.getData().getString(Constants.TOAST), Toast.LENGTH_SHORT).show();
+                    }
                     break;
             }
         }
@@ -143,44 +109,27 @@ public class MenuScreen extends AppCompatActivity implements NavigationView.OnNa
         setSupportActionBar(toolbar);
 
         DrawerLayout drawer = (DrawerLayout) findViewById(R.id.drawer_layout);
-        ActionBarDrawerToggle toggle = new ActionBarDrawerToggle(
-                this, drawer, toolbar, R.string.navigation_drawer_open, R.string.navigation_drawer_close);
+        ActionBarDrawerToggle toggle = new ActionBarDrawerToggle(this, drawer, toolbar, R.string.navigation_drawer_open, R.string.navigation_drawer_close);
         drawer.setDrawerListener(toggle);
         toggle.syncState();
 
         NavigationView navigationView = (NavigationView) findViewById(R.id.nav_view);
         navigationView.setNavigationItemSelectedListener(this);
 
-        /*
-        ImageView imageGronk = (ImageView) findViewById(R.id.background_image);
-        imageGronk.setVisibility(View.VISIBLE);
-        */
-
         mContext = getApplicationContext();
 
         //GET NECESSARY PERMISSIONS
         int MY_PERMISSIONS_REQUEST_ACCESS_COARSE_LOCATION = 1;
-        ActivityCompat.requestPermissions(this,
-                new String[]{Manifest.permission.ACCESS_COARSE_LOCATION},
-                MY_PERMISSIONS_REQUEST_ACCESS_COARSE_LOCATION);
-
-        //BLUETOOTH
-        /*
-        mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
-        mBluetoothAdapter.enable();
-
-        System.out.println("Bluetooth enabled: " + mBluetoothAdapter.getName() + " " + mBluetoothAdapter.isEnabled());
-        mBluetoothAdapter.startDiscovery();
-        System.out.println("Is discovering: " + mBluetoothAdapter.isDiscovering());
-
-        IntentFilter filter_search = new IntentFilter(BluetoothDevice.ACTION_FOUND);
-        registerReceiver(mReceiverBTDiscover, filter_search);
-
-        IntentFilter filter_connect = new IntentFilter(BluetoothDevice.ACTION_BOND_STATE_CHANGED);
-        registerReceiver(mReceiverBTConnect, filter_connect);
-        */
+        ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.ACCESS_COARSE_LOCATION}, MY_PERMISSIONS_REQUEST_ACCESS_COARSE_LOCATION);
 
         BTservice = new BluetoothBandService(mContext, mHandler);
+
+        //Setup graph variables
+        mGraphState = graphState.HEARTRATE_REALTIME;
+        mLineChart = (LineChart)findViewById(R.id.linechart);
+        mPieChart = (PieChart)findViewById(R.id.piechart);
+
+        mWorkoutInProgress = workoutState.NONE;
 
         hideAllCharts();
         System.out.println("Created App");
@@ -188,90 +137,11 @@ public class MenuScreen extends AppCompatActivity implements NavigationView.OnNa
 
     @Override
     protected void onDestroy() {
-        /*
-        unregisterReceiver(mReceiverBTDiscover);
-        unregisterReceiver(mReceiverBTConnect);
-        */
         BTservice.close();
         System.out.println("Destroyed EP Band");
         super.onDestroy();
     }
 
-    /*
-    // Create a BroadcastReceiver for ACTION_FOUND.
-    private final BroadcastReceiver mReceiverBTDiscover = new BroadcastReceiver() {
-        @Override
-        public void onReceive(Context context, Intent intent) {
-            String action = intent.getAction();
-            if (BluetoothDevice.ACTION_FOUND.equals(action)) {
-                // Discovery has found a device. Get the BluetoothDevice
-                // object and its info from the Intent.
-                BluetoothDevice device = intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE);
-                String deviceName = device.getName();
-                String deviceHardwareAddress = device.getAddress(); // MAC address
-                System.out.println("Device: " + deviceName + " " + deviceHardwareAddress);
-
-                try {
-                    if (deviceName.equals(desiredDeviceName)) {
-                        device.createBond();
-                        System.out.println("Created bond " + mBluetoothAdapter.getBondedDevices());
-                    }
-                } catch (NullPointerException ex) {
-                }
-            }
-        }
-    };
-
-    private final BroadcastReceiver mReceiverBTConnect = new BroadcastReceiver() {
-        @Override
-        public void onReceive(Context context, Intent intent) {
-            String action = intent.getAction();
-            System.out.println("mReceiverBTConnect");
-            if (BluetoothDevice.ACTION_BOND_STATE_CHANGED.equals(action)) {
-                BluetoothDevice device = intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE);
-                String deviceName = device.getName();
-                String deviceHardwareAddress = device.getAddress();
-                System.out.println("Bond State Device: " + deviceName + " " + deviceHardwareAddress);
-                System.out.println(BluetoothDevice.EXTRA_BOND_STATE);
-            }
-        }
-    };
-    */
-
-    /*
-    private void establishBluetooth() {
-        BluetoothDevice device = matchBluetoothDevice();
-        if (!(device == null)) {
-            Snackbar.make(findViewById(R.id.nav_view), "EP Band", Snackbar.LENGTH_INDEFINITE)
-                    .setAction("CONNECT", new View.OnClickListener() {
-                        @Override
-                        public void onClick(View view) {
-                            System.out.println("Connecting");
-                            if (connectSocket(matchBluetoothDevice())) {
-                                if (openStreams()) {
-                                    Snackbar.make(findViewById(R.id.nav_view), "CONNECTED", Snackbar.LENGTH_SHORT).show();
-                                    mConnected = true;
-                                } else {
-                                    Snackbar.make(findViewById(R.id.nav_view), "CONNECTION ERROR", Snackbar.LENGTH_SHORT).show();
-                                }
-                            } else {
-                                Snackbar.make(findViewById(R.id.nav_view), "FAILED CONNECTION", Snackbar.LENGTH_SHORT).show();
-                            }
-                        }
-                    })
-                    .setActionTextColor(getResources().getColor(R.color.greenSuccess))
-                    .show();
-        } else {
-            if (!mBluetoothAdapter.isDiscovering()) {
-                //Toast.makeText(MenuScreen.this, "Searching for EP Band", Toast.LENGTH_LONG).show();
-                Snackbar.make(findViewById(R.id.nav_view), "SEARCHING FOR EP BAND", Snackbar.LENGTH_SHORT).show();
-                mBluetoothAdapter.startDiscovery();
-                System.out.println("Start Discovery");
-            } else System.out.println("Still discovering");
-        }
-    }
-    */
-    //BLUETOOTH CLASS REWRITE VERSION
     private void establishBluetooth() {
         if (BTservice.canConnect()) {
             Snackbar.make(findViewById(R.id.nav_view), "EP Band", Snackbar.LENGTH_INDEFINITE)
@@ -304,137 +174,7 @@ public class MenuScreen extends AppCompatActivity implements NavigationView.OnNa
                 .show();
 
     }
-
-    /*
-    private boolean disconnectSocket() {
-        closeStreams();
-        if (socket.isConnected()) {
-            try {
-                socket.close();
-                socket = null;
-                return true;
-            } catch (IOException ex) {
-                System.out.println("Could not close socket");
-                return false;
-            }
-        } else return true;
-    }
-
-    private boolean connectSocket(BluetoothDevice device) {
-        if (device == null) {
-            System.out.println("Device is null");
-            return false;
-        } else {
-            //No longer need to waste resources trying to discover devices
-            if (mBluetoothAdapter.isDiscovering()) mBluetoothAdapter.cancelDiscovery();
-            ParcelUuid[] uuids = device.getUuids();
-            //attempt normal connection
-            try {
-                socket = device.createInsecureRfcommSocketToServiceRecord(uuids[0].getUuid());
-                if (!socket.isConnected()) {
-                    socket.connect();
-                    return true;
-                } else return false;
-            } catch (IOException ex) {
-                //If connection fails, use the workaround for Android 4.2 and above
-                System.out.println("Attempting alternate bluetooth socket connection");
-                try {
-                    Method m = device.getClass().getMethod("createInsecureRfcommSocket", new Class[]{int.class});
-                    socket = (BluetoothSocket) m.invoke(device, Integer.valueOf(1)); // 1==RFCOMM channel code
-                    socket.connect();
-                    return true;
-                } catch (Exception ex2) {
-                    //All attempts failed
-                    System.out.println("Completely unable to open bluetooth socket");
-                    return false;
-                }
-            } catch (NullPointerException ex) {
-                //Device doesn't properly offer a UUID
-                System.out.println("No uuids provided by device");
-                return false;
-            }
-        }
-    }
-
-    private boolean openStreams() {
-        if (socket.isConnected()) {
-            try {
-                outputStream = socket.getOutputStream();
-                System.out.println("Output Stream Open");
-
-                inStream = socket.getInputStream();
-                System.out.println("Input Stream Open");
-                return true;
-            } catch (IOException ex) {
-                System.out.println("Unable to open both streams");
-                closeStreams();
-                return false;
-            }
-        } else return false;
-    }
-
-    private boolean closeStreams() {
-        boolean result = true;
-        try {
-            outputStream.close();
-            outputStream = null;
-        } catch (IOException ex2) {
-            System.out.println("Could not close outputStream");
-            result = false;
-        } catch (NullPointerException ex2) {
-            System.out.println("outputStream wasn't open, no need to close");
-        }
-        try {
-            inStream.close();
-            inStream = null;
-        } catch (IOException ex2) {
-            System.out.println("Could not close inStream");
-            result = false;
-        } catch (NullPointerException ex2) {
-            System.out.println("inStream wasn't open, no need to close");
-        }
-        return result;
-    }
-
-    private BluetoothDevice matchBluetoothDevice() {
-        BluetoothDevice device = null;
-        Set<BluetoothDevice> BondedDevices = mBluetoothAdapter.getBondedDevices();
-        for (BluetoothDevice d : BondedDevices) {
-            if (d.getName().equals(desiredDeviceName)) device = d;
-        }
-        return device;
-    }
-
-    private boolean bluetoothWrite(String message) {
-        try {
-            outputStream.write(message.getBytes());
-            System.out.println("Message write to outputStream succeeded");
-            return true;
-        } catch (IOException ex) {
-            System.out.println("Message write to outputStream failed");
-            return false;
-        }
-    }
-
-    private String bluetoothRead() {
-        try {
-            int size = inStream.available();
-            if (size > 0) {
-                byte[] buffer = new byte[size];
-                inStream.read(buffer);
-                System.out.println("Read " + size + " bytes");
-                return new String(buffer);
-            } else {
-                System.out.println("No bytes read");
-                return "";
-            }
-        } catch (IOException ex) {
-            System.out.println("Could not read from inStream");
-            return null;
-        }
-    }
-    */
-
+    
     @Override
     public void onBackPressed() {
         DrawerLayout drawer = (DrawerLayout) findViewById(R.id.drawer_layout);
@@ -455,7 +195,6 @@ public class MenuScreen extends AppCompatActivity implements NavigationView.OnNa
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
         int id = item.getItemId();
-        //noinspection SimplifiableIfStatement
         switch (id) {
             case R.id.bluetooth_status:
                 String Message = (BTservice.isConnected()) ? "EP Band is Connected" : "No bluetooth connection";
@@ -481,6 +220,16 @@ public class MenuScreen extends AppCompatActivity implements NavigationView.OnNa
                 break;
             case R.id.workout1:
                 SampleWorkout1();
+                break;
+            case R.id.workout2:
+                SampleWorkout2();
+                break;
+            case R.id.time_toggle:
+                OptionCallbackTimeSwitch();
+                break;
+            case R.id.graph_toggle:
+                OptionCallbackDataSwitch();
+                break;
         }
         return super.onOptionsItemSelected(item);
     }
@@ -490,70 +239,50 @@ public class MenuScreen extends AppCompatActivity implements NavigationView.OnNa
         // Handle navigation view item clicks here.
         int id = item.getItemId();
         hideAllCharts();
-
         switch (id) {
             case R.id.nav_device:
                 System.out.println("Menu: Device Setup");
                 if (!BTservice.isConnected()) establishBluetooth();
-                else endBluetooth();
-                //AppendFile("TestWorkout", "__A__");
-                //ReadFile("TestWorkout");
-                //CreateFile("HELLO WORLD");
-                //ReadFile("TestWorkout");
-                //ListFiles();
-
+                else{
+                    if(mWorkoutInProgress == workoutState.WORKOUT){
+                        Toast.makeText(mContext,"Cannot disconnect bluetooth while workout in progress",Toast.LENGTH_LONG);
+                    }
+                    else endBluetooth();
+                }
                 break;
             case R.id.nav_edit_workout:
                 System.out.println("Menu: Workout Templates");
-                //bluetoothWrite("Hello World");
-                //bluetoothRead();
-                //String filename = "JOBJECT";
-                //CreateFile(filename);
-                /*JSONObject jObj = testJSON();
-                AppendFile(filename,jObj.toString());
-                String content = ReadFile(filename);
-                try {
-                    jObj = new JSONObject(content);
-                    System.out.println("File contained:\n"+jObj);
-                }catch(Exception ex){
-                    System.out.println("Couldn't read JSON");
-                }*/
-                //ListFiles();
-
                 break;
             case R.id.nav_profile:
                 System.out.println("Menu: Profile");
                 Intent intent = new Intent(MenuScreen.this, ProfileActivity.class);
                 startActivity(intent);
-                PrintProfile();
-                ListFiles();
                 break;
             case R.id.nav_review:
                 System.out.println("Menu: View Analysis");
                 Intent intent_review = new Intent(MenuScreen.this, SelectWorkout.class);
                 String[] List = fileList();
-                intent_review.putExtra("Files", List);
+                Arrays.sort(List);
+                intent_review.putExtra("ListData", List);
+                intent_review.putExtra("Title", "Select Past Workout");
                 startActivityForResult(intent_review, 1);
-/*
-                System.out.println("Return from activity:\n");
-                System.out.println("intent result: " + intent_review.getStringExtra("result"));
-                try {
-                    mWorkout.getHeartRate().CalculateSummary(GetMHR());
-                    mWorkout.getHeartRate().PlotSummary((PieChart) findViewById(R.id.piechart));
-                }catch(JSONException ex){
-                    System.out.println("JSON ERROR with Summary");
-                }
-                */
                 break;
             case R.id.nav_workout_start:
-
                 System.out.println("Menu: Start Workout");
-                mWorkout.getHeartRate().PlotAll((LineChart) findViewById(R.id.linechart));
                 break;
         }
         DrawerLayout drawer = (DrawerLayout) findViewById(R.id.drawer_layout);
         drawer.closeDrawer(GravityCompat.START);
         return true;
+    }
+
+    private void chooseExercise(){
+        Intent intent_review = new Intent(MenuScreen.this, SelectWorkout.class);
+        String[] data = Constants.ExerciseList;
+        Arrays.sort(data);
+        intent_review.putExtra("ListData", Constants.ExerciseList);
+        intent_review.putExtra("Title", "Choose Next Exercise");
+        startActivityForResult(intent_review, 1);
     }
 
     private void hideAllCharts() {
@@ -583,16 +312,6 @@ public class MenuScreen extends AppCompatActivity implements NavigationView.OnNa
         return profile;
     }
 
-    public void PrintProfile() {
-        int[] profile = GetProfile();
-        System.out.println("height: " + profile[0]);
-        System.out.println("weight: " + profile[1]);
-        System.out.println("age: " + profile[2]);
-        System.out.println("gender: " + profile[3]);
-        System.out.println("MHR: " + profile[4]);
-        System.out.println("arm: " + profile[5]);
-    }
-
     public void ListFiles() {
         File Dir = getFilesDir();
         String[] List = fileList();
@@ -616,7 +335,8 @@ public class MenuScreen extends AppCompatActivity implements NavigationView.OnNa
         String[] List = fileList();
         for(String f: List){
             if(f.startsWith(Constants.EXAMPLE) && !f.contains("(")) {
-
+                deleteFile(f);
+                System.out.println("\tDeleted: " + f);
             }else{
                 deleteFile(f);
                 System.out.println("\tDeleted: " + f);
@@ -640,25 +360,66 @@ public class MenuScreen extends AppCompatActivity implements NavigationView.OnNa
 
     @Override
     protected void onActivityResult ( int requestCode, int resultCode, Intent data) {
-
-        if (requestCode == SELECT_WORKOUT) {
-            if(resultCode == Activity.RESULT_OK){
-                String filename = data.getStringExtra("result");
-                System.out.println("Chose workout: " + filename);
-                try {
-                    mWorkout = new Workout(mContext, filename);
-                    System.out.println("Successfully loaded saved workout");
-                }catch(Exception ex){
-                    mWorkout = new Workout(mContext);
-                    System.out.println("Could not load saved workout");
-                }
-            }
-            if (resultCode == Activity.RESULT_CANCELED) {
-                mWorkout = new Workout(mContext);
-                System.out.println("Canceled workout select");
+        if(resultCode == Activity.RESULT_OK){
+            switch(requestCode) {
+                case SELECT_WORKOUT:
+                    /*
+                    mLineChart.clear();
+                    mPieChart.clear();
+                    hideAllCharts();
+                    */
+                    String filename = data.getStringExtra("result");
+                    System.out.println("Chose workout: " + filename);
+                    try {
+                        mWorkout = new Workout(mContext, filename);
+                        System.out.println("Successfully loaded saved workout");
+                        System.out.println(ReadFile(filename));
+                    } catch (Exception ex) {
+                        mWorkout = new Workout(mContext);
+                        System.out.println("Could not load saved workout");
+                    }
+                    mWorkoutInProgress = workoutState.REVIEW;
+                    break;
+                case SELECT_EXERCISE:
+                    String exercise2 = data.getStringExtra("result");
+                    System.out.println("Chose exercise: " + exercise2);
+                    break;
+                case REVIEW_EXERCISE:
+                    mWorkoutInProgress = workoutState.REVIEW;
+                    String exercise = data.getStringExtra("result");
+                    int index = data.getIntExtra("index", -1);
+                    System.out.println("Index: " + index);
+                    if (index > 0) {
+                        try {
+                            JSONObject jObject = mMotion.mExerciseData.getJSONObject(index-1);
+                            System.out.println("Exercise JSON: " + jObject.toString());
+                            mExercise = new Exercise(jObject);
+                            System.out.println("Chose to review: " + exercise + "\n" + mExercise.GetJSONString());
+                            mExercise.PlotAll(mLineChart);
+                            mGraphState = graphState.MOTION_REALTIME;
+                        } catch (JSONException ex) {
+                            System.out.println("JSONException for exercise review");
+                        }
+                    }
+                    else if(index == 0){
+                        mHeartRate.PlotAll(mLineChart);
+                        mGraphState = graphState.HEARTRATE_REALTIME;
+                        System.out.println("Chose to review: Heart Rate");
+                    }
+                    else{
+                        System.out.println("Chose to review: NOTHING!");
+                    }
+                    break;
             }
         }
-    }//onActivityResult
+        else if(resultCode == Activity.RESULT_CANCELED){
+            System.out.println("Canceled");
+        }
+        else{
+            System.out.println("Unknown activity result");
+        }
+        System.out.println("onActivityResult() finished");
+    }
 
     private void SampleWorkout1(){
         mWorkout = new Workout(mContext);
@@ -673,9 +434,10 @@ public class MenuScreen extends AppCompatActivity implements NavigationView.OnNa
         }
         HR.AddData(BPM);
 
+        mMotion = mWorkout.getMotion();
         Exercise exercise = new Exercise();
         try {
-            double X = 0.0, Y = 0.0, Z = 0.0, rX = 0.0, rY = 0.0, rZ = 0.0;
+            double X, Y, Z, rX, rY, rZ;
             for(int i = 0; i < 100; i++){
                 rX = 180*Math.sin(2 * Math.PI * i / 100);
                 rY = 180*Math.sin(2 * Math.PI * i / 100 + Math.PI/2);
@@ -686,7 +448,11 @@ public class MenuScreen extends AppCompatActivity implements NavigationView.OnNa
                 exercise.AddData(X, Y, Z, rX, rY, rZ);
             }
             exercise.PlotAll((LineChart) findViewById(R.id.linechart));
+            exercise.mExercise = "Sample Data";
+            System.out.println(exercise.GetJSONString());
+            mWorkout.getMotion().AddExerciseData(exercise);
             mWorkout.writeFile();
+            ListFiles();
         }catch(JSONException ex){
             System.out.println("JSON Exception in exercise");
         }catch(IOException ex){
@@ -695,10 +461,187 @@ public class MenuScreen extends AppCompatActivity implements NavigationView.OnNa
     }
 
     private void SampleWorkout2(){
+        mWorkout = new Workout(mContext);
+        mWorkout.setExampleFileName("2");
+
+        //SAMPLE HEART RATE DATA
+        HeartRate HR = mWorkout.getHeartRate();
+        HR.SetSampleRate(new Date(6000));
+        int[] BPM = new int[1000];
+        for(int i = 0; i < BPM.length; i++){
+            BPM[i] = (int)(220*Math.pow(Math.cos(i * Math.PI / 1000.0), 2));
+        }
+        HR.AddData(BPM);
+
+        mMotion = mWorkout.getMotion();
+        Exercise exercise = new Exercise();
+        try {
+            double X = 0, Y = 0, Z = 0, rX = 0, rY = 0, rZ = 0;
+            for(int i = 0; i < 1000; i++){
+                rX = 45*Math.cos(2 * Math.PI * i / 100 + Math.PI)+45;
+                exercise.AddData(X, Y, Z, rX, rY, rZ);
+            }
+            exercise.PlotAll((LineChart) findViewById(R.id.linechart));
+            exercise.mExercise = "Sample Data";
+            System.out.println(exercise.GetJSONString());
+            mWorkout.getMotion().AddExerciseData(exercise);
+        }catch(JSONException ex){
+            System.out.println("JSON Exception in exercise");
+        }
+
+        exercise = new Exercise();
+        try {
+            double X = 0, Y = 0, Z = 0, rX = 0, rY = 0, rZ = 0;
+            for(int i = 0; i < 1000; i++){
+                rY = 45*Math.cos(2 * Math.PI * i / 100 + Math.PI)+45;
+                exercise.AddData(X, Y, Z, rX, rY, rZ);
+            }
+            exercise.PlotAll((LineChart) findViewById(R.id.linechart));
+            exercise.mExercise = "Sample Data2";
+            System.out.println(exercise.GetJSONString());
+            mWorkout.getMotion().AddExerciseData(exercise);
+        }catch(JSONException ex){
+            System.out.println("JSON Exception in exercise");
+        }
+
+        exercise = new Exercise();
+        try {
+            double X = 0, Y = 0, Z = 0, rX = 0, rY = 0, rZ = 0;
+            for(int i = 0; i < 1000; i++){
+                rZ = 45*Math.cos(2 * Math.PI * i / 100 + Math.PI)+45;
+                exercise.AddData(X, Y, Z, rX, rY, rZ);
+            }
+            exercise.PlotAll((LineChart) findViewById(R.id.linechart));
+            exercise.mExercise = "Sample Data3";
+            System.out.println(exercise.GetJSONString());
+            mWorkout.getMotion().AddExerciseData(exercise);
+        }catch(JSONException ex){
+            System.out.println("JSON Exception in exercise");
+        }
+
+        try {
+            mWorkout.writeFile();
+        }catch(Exception ex){
+            System.out.println("IO Exception for workout");
+        }
+    }
+
+    private void updateGraphVisibility(){
+        hideAllCharts();
+        if(mWorkout == null){
+            System.out.println("mWorkout is null");
+            return;
+        }
+        else if(mWorkoutInProgress != workoutState.NONE){
+            redrawGraph();
+            switch (mGraphState) {
+                case HEARTRATE_REALTIME:
+                    System.out.println("updateGraphVisibility() for HEARTRATE_REALTIME");
+                    mLineChart.setVisibility(View.VISIBLE);
+                    mWorkout.plotHeartRateRealTime(mLineChart);
+                    break;
+                case HEARTRATE_SUMMARY:
+                    System.out.println("updateGraphVisibility() for HEARTRATE_SUMMARY");
+                    mPieChart.setVisibility(View.VISIBLE);
+                    mWorkout.plotHeartRateSummary(mPieChart);
+                    break;
+                case MOTION_REALTIME:
+                    System.out.println("updateGraphVisibility() for MOTION_REALTIME");
+                    mLineChart.setVisibility(View.VISIBLE);
+                    try{
+                        mExercise.PlotAll(mLineChart);
+                    }catch (JSONException ex){
+                        System.out.println("JSONException with exercise real time plot");
+                    }
+                    break;
+                case MOTION_SUMMARY:
+                    System.out.println("updateGraphVisibility() for MOTION_SUMMARY");
+                    //mPieChart.setVisibility(View.VISIBLE);
+
+                    break;
+            }
+        }
+    }
+
+    private void redrawGraph(){
+        System.out.println("redrawGraph()");
+        switch (mGraphState){
+            case HEARTRATE_REALTIME:
+            case MOTION_REALTIME:
+                //mLineChart.invalidate();
+                break;
+
+            case HEARTRATE_SUMMARY:
+                //mPieChart.invalidate();
+                break;
+            case MOTION_SUMMARY:
+
+                break;
+
+        }
+    }
+
+    private void OptionCallbackTimeSwitch(){
+        System.out.println("OptionCallbackTimeSwitch()");
+        switch(mWorkoutInProgress) {
+            case WORKOUT:
+            case REVIEW:
+                switch (mGraphState) {
+                    case HEARTRATE_REALTIME:
+                        mGraphState = graphState.HEARTRATE_SUMMARY;
+                        break;
+                    case MOTION_REALTIME:
+                        mGraphState = graphState.MOTION_SUMMARY;
+                        break;
+                    case HEARTRATE_SUMMARY:
+                        mGraphState = graphState.HEARTRATE_REALTIME;
+                        break;
+                    case MOTION_SUMMARY:
+                        mGraphState = graphState.MOTION_REALTIME;
+                        break;
+                }
+                break;
+            case NONE:
+                Toast.makeText(mContext, "No workout being made/reviewed", Toast.LENGTH_SHORT).show();
+                break;
+        }
+        updateGraphVisibility();
+    }
+
+    private void OptionCallbackDataSwitch(){
+        if(mWorkoutInProgress == workoutState.REVIEW){
+            System.out.println("Choose review exercise");
+            chooseReview();
+        }
+        else if(mWorkoutInProgress == workoutState.WORKOUT){
+            System.out.println("Choose next exercise");
+            chooseExercise();
+        }
+        else{
+            Toast.makeText(mContext,"No workout being made/reviewed",Toast.LENGTH_SHORT).show();
+        }
 
     }
 
-    private void NewWorkout(){
-        mWorkout = new Workout(mContext);
+    private void chooseReview(){
+        System.out.println("chooseReview");
+        List<String> fullList = new ArrayList<>();
+        mHeartRate = mWorkout.getHeartRate();
+        mMotion = mWorkout.getMotion();
+        if(mHeartRate != null){
+            fullList.add("Heart Rate");
+        }
+        try {
+            List<String> list = mMotion.GetExerciseList();
+            fullList.addAll(list);
+        }catch(JSONException ex){
+            System.out.println("No exercises in workout");
+        }
+        Intent intent_review = new Intent(MenuScreen.this, SelectWorkout.class);
+        String[] passList = new String[fullList.size()];
+        passList = fullList.toArray(passList);
+        intent_review.putExtra("ListData", passList);
+        intent_review.putExtra("Title", "Choose Exercise to Review");
+        startActivityForResult(intent_review, REVIEW_EXERCISE);
     }
 }

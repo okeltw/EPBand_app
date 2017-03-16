@@ -3,7 +3,6 @@ package uc.epband;
 import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.support.design.widget.FloatingActionButton;
-import android.support.design.widget.Snackbar;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
 import android.view.View;
@@ -23,14 +22,16 @@ public class ProfileActivity extends AppCompatActivity {
         EditText Age = (EditText) findViewById(R.id.editTextAge);
         EditText Height = (EditText) findViewById(R.id.editTextHeight);
         EditText Weight = (EditText) findViewById(R.id.editTextWeight);
+        EditText ROM = (EditText) findViewById(R.id.editTextROM);
         ToggleButton Gender = (ToggleButton) findViewById(R.id.toggleButtonGender);
 
 
         Height.setText(Integer.toString(profile[0]));
         Weight.setText(Integer.toString(profile[1]));
         Age.setText(Integer.toString(profile[2]));
+        ROM.setText(Integer.toString(profile[3]));
 
-        if(profile[3] == 1){
+        if(profile[4] == 1){
             Gender.setChecked(true);
         }
         else{
@@ -45,14 +46,16 @@ public class ProfileActivity extends AppCompatActivity {
                 EditText Age = (EditText) findViewById(R.id.editTextAge);
                 EditText Height = (EditText) findViewById(R.id.editTextHeight);
                 EditText Weight = (EditText) findViewById(R.id.editTextWeight);
+                EditText ROM = (EditText) findViewById(R.id.editTextROM);
                 ToggleButton Gender = (ToggleButton) findViewById(R.id.toggleButtonGender);
 
                 int age = Integer.parseInt(Age.getText().toString());
                 int height = Integer.parseInt(Height.getText().toString());
                 int weight = Integer.parseInt(Weight.getText().toString());
+                int rom = Integer.parseInt(ROM.getText().toString());
                 boolean gender = Gender.isChecked();
 
-                SetProfile("test", height, weight, age, gender);
+                SetProfile("test", height, weight, age, rom, gender);
                 finish();
             }
         });
@@ -67,10 +70,14 @@ public class ProfileActivity extends AppCompatActivity {
         });
     }
 
-    public void SetProfile(String filename, int height, int weight, int age, boolean gender){
+    public void SetProfile(String filename, int height, int weight, int age, int ROM, boolean gender){
         // gender: 0 is male, 1 is female
         if(age < 10) age = 18;
         else if (age > 100) age = 100;
+
+        if(ROM < 60) ROM = 60;
+        else if(ROM > 100) ROM = 100;
+
         int MHR = 220 - age;
 
         if(height < 58) height = 58;
@@ -82,6 +89,7 @@ public class ProfileActivity extends AppCompatActivity {
         editor.putInt("height", height);
         editor.putInt("weight", weight);
         editor.putInt("age", age);
+        editor.putInt("ROM", ROM);
         editor.putInt("gender", ((gender) ? 1 : 0) );
         editor.putInt("MHR", MHR);
         editor.putInt("arm", ArmLength);
@@ -90,11 +98,12 @@ public class ProfileActivity extends AppCompatActivity {
 
     public int[] GetProfile(String filename){
         SharedPreferences Settings = getSharedPreferences(filename,MODE_PRIVATE);
-        int[] profile = new int[4];
+        int[] profile = new int[5];
         profile[0] = Settings.getInt("height", 70);
         profile[1] = Settings.getInt("weight", 170);
         profile[2] = Settings.getInt("age", 21);
-        profile[3] = Settings.getInt("gender", 0);
+        profile[3] = Settings.getInt("ROM", 70);
+        profile[4] = Settings.getInt("gender", 0);
         return profile;
     }
 }

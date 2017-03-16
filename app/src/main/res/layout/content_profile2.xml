@@ -100,8 +100,31 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:textAppearance="?android:attr/textAppearanceLarge"
-                android:text="Gender"
+                android:text="ROM (%)"
                 android:id="@+id/textView5"
+                android:textColor="@color/colorSecondary" />
+
+            <EditText
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:inputType="number"
+                android:ems="10"
+                android:id="@+id/editTextROM"
+                android:textColor="@color/colorSecondary"
+                android:backgroundTint="@color/colorSecondary" />
+        </TableRow>
+
+        <TableRow
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:touchscreenBlocksFocus="false">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textAppearance="?android:attr/textAppearanceLarge"
+                android:text="Gender"
+                android:id="@+id/textView6"
                 android:textColor="@color/colorSecondary" />
 
             <ToggleButton
@@ -112,7 +135,8 @@
                 android:textOff="Male"
                 android:textOn="Female"
                 android:textColor="@color/colorSecondary"
-                android:backgroundTint="@color/colorAccent" />
+                android:backgroundTint="@color/colorAccent"
+                android:textAlignment="inherit" />
         </TableRow>
     </TableLayout>
 
