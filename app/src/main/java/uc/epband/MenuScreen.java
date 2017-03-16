@@ -2,7 +2,9 @@ package uc.epband;
 
 import android.Manifest;
 import android.app.Activity;
+import android.app.AlertDialog;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.Bundle;
@@ -54,6 +56,8 @@ public class MenuScreen extends AppCompatActivity implements NavigationView.OnNa
     private PieChart mPieChart;
 
     private Context mContext;
+    private AlertDialog.Builder mDialogConnect, mDialogDisconnect, mDialogCreateWorkout, mDialogEndWorkout,
+            mDialogEndExercise, mDialogNextExercise;
 
     //RETURN CODES
     private final int SELECT_WORKOUT = 1, SELECT_EXERCISE = 2, REVIEW_EXERCISE = 3;
@@ -131,6 +135,7 @@ public class MenuScreen extends AppCompatActivity implements NavigationView.OnNa
 
         mWorkoutInProgress = workoutState.NONE;
 
+        createDialogTemplates();
         hideAllCharts();
         System.out.println("Created App");
     }
@@ -143,36 +148,16 @@ public class MenuScreen extends AppCompatActivity implements NavigationView.OnNa
     }
 
     private void establishBluetooth() {
+        System.out.println("establishBluetooth()");
         if (BTservice.canConnect()) {
-            Snackbar.make(findViewById(R.id.nav_view), "EP Band", Snackbar.LENGTH_INDEFINITE)
-                    .setAction("CONNECT", new View.OnClickListener() {
-                        @Override
-                        public void onClick(View view) {
-                            System.out.println("Connecting");
-                            if ( BTservice.connect() ) {
-                                Snackbar.make(findViewById(R.id.nav_view), "CONNECTED", Snackbar.LENGTH_SHORT).show();
-                            } else {
-                                Snackbar.make(findViewById(R.id.nav_view), "FAILED CONNECTION", Snackbar.LENGTH_SHORT).show();
-                            }
-                        }
-                    })
-                    .setActionTextColor(getResources().getColor(R.color.greenSuccess))
-                    .show();
+            System.out.println("builder.create()");
+            mDialogConnect.show();
         }
+        else System.out.println("BTservice can't connect");
     }
 
     private void endBluetooth() {
-        Snackbar.make(findViewById(R.id.nav_view), "EP Band", Snackbar.LENGTH_LONG)
-                .setAction("DISCONNECT", new View.OnClickListener() {
-                    @Override
-                    public void onClick(View view) {
-                        BTservice.close();
-                        Snackbar.make(findViewById(R.id.nav_view), "DISCONNECTED", Snackbar.LENGTH_SHORT).show();
-                    }
-                })
-                .setActionTextColor(getResources().getColor(R.color.colorAccent))
-                .show();
-
+        mDialogDisconnect.show();
     }
     
     @Override
@@ -534,6 +519,7 @@ public class MenuScreen extends AppCompatActivity implements NavigationView.OnNa
         }
         else if(mWorkoutInProgress != workoutState.NONE){
             redrawGraph();
+            hideAllCharts();
             switch (mGraphState) {
                 case HEARTRATE_REALTIME:
                     System.out.println("updateGraphVisibility() for HEARTRATE_REALTIME");
@@ -643,5 +629,124 @@ public class MenuScreen extends AppCompatActivity implements NavigationView.OnNa
         intent_review.putExtra("ListData", passList);
         intent_review.putExtra("Title", "Choose Exercise to Review");
         startActivityForResult(intent_review, REVIEW_EXERCISE);
+    }
+
+    public void createDialogTemplates(){
+        createDialogConnect();
+        createDialogDisconnect();
+        createDialogNewWorkout();
+        createDialogEndWorkout();
+        createDialogNextExercise();
+        createDialogEndExercise();
+    }
+
+    public void createDialogConnect(){
+        mDialogConnect = new AlertDialog.Builder(this);
+        mDialogConnect.setMessage("Attempt connection to EP Band?")
+                .setTitle("Bluetooth")
+                .setIcon(R.drawable.ic_bluetooth_connected_24dp);
+
+        mDialogConnect.setPositiveButton("Connect", new DialogInterface.OnClickListener() {
+            public void onClick(DialogInterface dialog, int id) {
+                System.out.println("Bluetooth connect");
+                BTservice.connect();
+            }
+        });
+        mDialogConnect.setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
+            public void onClick(DialogInterface dialog, int id) {
+                System.out.println("cancel");
+            }
+        });
+    }
+
+    public void createDialogDisconnect(){
+        mDialogDisconnect = new AlertDialog.Builder(this);
+        mDialogDisconnect.setMessage("Disconnect from EP Band?")
+                .setTitle("Bluetooth")
+                .setIcon(R.drawable.ic_bluetooth_disabled_24dp);
+
+        mDialogDisconnect.setPositiveButton("Disconnect", new DialogInterface.OnClickListener() {
+            public void onClick(DialogInterface dialog, int id) {
+                System.out.println("Bluetooth disconnect");
+                BTservice.close();
+            }
+        });
+        mDialogDisconnect.setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
+            public void onClick(DialogInterface dialog, int id) {
+                System.out.println("cancel");
+            }
+        });
+    }
+
+    public void createDialogNewWorkout(){
+        mDialogCreateWorkout = new AlertDialog.Builder(this);
+        mDialogCreateWorkout.setMessage("Start new workout?")
+                .setTitle("Workout")
+                .setIcon(R.drawable.ic_note_add_24dp);
+
+        mDialogCreateWorkout.setPositiveButton("Start Workout", new DialogInterface.OnClickListener() {
+            public void onClick(DialogInterface dialog, int id) {
+                System.out.println("Bluetooth connect");
+            }
+        });
+        mDialogCreateWorkout.setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
+            public void onClick(DialogInterface dialog, int id) {
+                System.out.println("cancel");
+            }
+        });
+    }
+
+    public void createDialogEndWorkout(){
+        mDialogEndWorkout = new AlertDialog.Builder(this);
+        mDialogEndWorkout.setMessage("End current workout?")
+                .setTitle("Workout")
+                .setIcon(R.drawable.ic_cancel_24dp);
+
+        mDialogEndWorkout.setPositiveButton("End Workout", new DialogInterface.OnClickListener() {
+            public void onClick(DialogInterface dialog, int id) {
+                System.out.println("End workout");
+            }
+        });
+        mDialogEndWorkout.setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
+            public void onClick(DialogInterface dialog, int id) {
+                System.out.println("cancel");
+            }
+        });
+    }
+
+    public void createDialogNextExercise(){
+        mDialogNextExercise = new AlertDialog.Builder(this);
+        mDialogNextExercise.setMessage("Start next exercise?")
+                .setTitle("Exercise")
+                .setIcon(R.drawable.ic_add_24dp);
+
+        mDialogNextExercise.setPositiveButton("Next Exercise", new DialogInterface.OnClickListener() {
+            public void onClick(DialogInterface dialog, int id) {
+                System.out.println("Next exercise");
+            }
+        });
+        mDialogNextExercise.setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
+            public void onClick(DialogInterface dialog, int id) {
+                System.out.println("cancel");
+            }
+        });
+    }
+
+    public void createDialogEndExercise(){
+        mDialogEndExercise = new AlertDialog.Builder(this);
+        mDialogEndExercise.setMessage("End current exercise?")
+                .setTitle("Exercise")
+                .setIcon(R.drawable.ic_clear_24dp);
+
+        mDialogEndExercise.setPositiveButton("End Exercise", new DialogInterface.OnClickListener() {
+            public void onClick(DialogInterface dialog, int id) {
+                System.out.println("End exercise");
+            }
+        });
+        mDialogEndExercise.setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
+            public void onClick(DialogInterface dialog, int id) {
+                System.out.println("cancel");
+            }
+        });
     }
 }
