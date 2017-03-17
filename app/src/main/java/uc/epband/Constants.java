@@ -79,7 +79,7 @@ public interface Constants {
             MESSAGE_DEVICE_NAME = 4,
             MESSAGE_TOAST = 5;
 
-    String TOAST = "toast", DEVICE_NAME = "Andrew's iPhone";
+    String TOAST = "toast", DEVICE_NAME = "EPBand";//"Andrew's iPhone";
 
     enum AXIS_OF_ROTATION{
         AXIS_X,

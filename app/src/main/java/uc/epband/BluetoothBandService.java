@@ -38,7 +38,7 @@ public class BluetoothBandService implements Constants{
 
     private ArrayList<String> mDeviceList = new ArrayList<String>();
     private Boolean mConnected = false;
-    public String desiredDeviceName = "Andrew's iPhone";
+    public String desiredDeviceName = Constants.DEVICE_NAME;
 
     // Create a BroadcastReceiver for ACTION_FOUND.
     private final BroadcastReceiver mReceiverBTDiscover = new BroadcastReceiver() {

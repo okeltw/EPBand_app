@@ -47,6 +47,7 @@ public class MenuScreen extends AppCompatActivity implements NavigationView.OnNa
         WORKOUT, REVIEW, NONE
     }
     private workoutState mWorkoutInProgress;
+    private Boolean mExerciseInProgress;
 
     public enum graphState{
         HEARTRATE_REALTIME, HEARTRATE_SUMMARY, MOTION_REALTIME, MOTION_SUMMARY
@@ -57,7 +58,7 @@ public class MenuScreen extends AppCompatActivity implements NavigationView.OnNa
 
     private Context mContext;
     private AlertDialog.Builder mDialogConnect, mDialogDisconnect, mDialogCreateWorkout, mDialogEndWorkout,
-            mDialogEndExercise, mDialogNextExercise;
+            mDialogEndExercise, mDialogNextExercise, mDialogDeleteFiles;
 
     //RETURN CODES
     private final int SELECT_WORKOUT = 1, SELECT_EXERCISE = 2, REVIEW_EXERCISE = 3;
@@ -133,7 +134,9 @@ public class MenuScreen extends AppCompatActivity implements NavigationView.OnNa
         mLineChart = (LineChart)findViewById(R.id.linechart);
         mPieChart = (PieChart)findViewById(R.id.piechart);
 
+        mExerciseInProgress = false;
         mWorkoutInProgress = workoutState.NONE;
+        invalidateOptionsMenu();
 
         createDialogTemplates();
         hideAllCharts();
@@ -174,6 +177,37 @@ public class MenuScreen extends AppCompatActivity implements NavigationView.OnNa
     public boolean onCreateOptionsMenu(Menu menu) {
         // Inflate the menu; this adds items to the action bar if it is present.
         getMenuInflater().inflate(R.menu.menu_screen, menu);
+        MenuItem timeToggle = menu.findItem(R.id.time_toggle);
+        MenuItem graphToggle = menu.findItem(R.id.graph_toggle);
+        MenuItem exerciseStart = menu.findItem(R.id.exercise_on);
+        MenuItem exerciseStop = menu.findItem(R.id.exercise_off);
+        switch(mWorkoutInProgress){
+            case REVIEW:
+                timeToggle.setEnabled(true).setVisible(true);
+                graphToggle.setEnabled(true).setVisible(true);
+                exerciseStart.setEnabled(false).setVisible(false);
+                exerciseStop.setEnabled(false).setVisible(false);
+                break;
+            case WORKOUT:
+                timeToggle.setEnabled(false).setVisible(false);
+                graphToggle.setEnabled(false).setVisible(false);
+                if(mExerciseInProgress) {
+                    exerciseStart.setEnabled(false).setVisible(false);
+                    exerciseStop.setEnabled(true).setVisible(true);
+                }
+                else {
+                    exerciseStart.setEnabled(true).setVisible(true);
+                    exerciseStop.setEnabled(false).setVisible(false);
+                }
+                break;
+            case NONE:
+            default:
+                timeToggle.setEnabled(false).setVisible(false);
+                graphToggle.setEnabled(false).setVisible(false);
+                exerciseStart.setEnabled(false).setVisible(false);
+                exerciseStop.setEnabled(false).setVisible(false);
+                break;
+        }
         return true;
     }
 
@@ -186,15 +220,7 @@ public class MenuScreen extends AppCompatActivity implements NavigationView.OnNa
                 Toast.makeText(this,Message,Toast.LENGTH_SHORT).show();
                 break;
             case R.id.delete_files:
-                Snackbar.make(findViewById(R.id.nav_view), "Delete all saved files?", Snackbar.LENGTH_SHORT)
-                        .setAction("CONFIRM", new View.OnClickListener() {
-                            @Override
-                            public void onClick(View view) {
-                                DeleteAllFiles();
-                            }
-                        })
-                        .setActionTextColor(getResources().getColor(R.color.colorAccent))
-                        .show();
+                mDialogDeleteFiles.show();
                 break;
             case R.id.workout1:
                 SampleWorkout1();
@@ -207,6 +233,12 @@ public class MenuScreen extends AppCompatActivity implements NavigationView.OnNa
                 break;
             case R.id.graph_toggle:
                 OptionCallbackDataSwitch();
+                break;
+            case R.id.exercise_on:
+                mDialogNextExercise.show();
+                break;
+            case R.id.exercise_off:
+                mDialogEndExercise.show();
                 break;
         }
         return super.onOptionsItemSelected(item);
@@ -237,16 +269,26 @@ public class MenuScreen extends AppCompatActivity implements NavigationView.OnNa
                 startActivity(intent);
                 break;
             case R.id.nav_review:
-                System.out.println("Menu: View Analysis");
-                Intent intent_review = new Intent(MenuScreen.this, SelectWorkout.class);
-                String[] List = fileList();
-                Arrays.sort(List);
-                intent_review.putExtra("ListData", List);
-                intent_review.putExtra("Title", "Select Past Workout");
-                startActivityForResult(intent_review, 1);
+                if(mWorkoutInProgress == workoutState.WORKOUT){
+                    Toast.makeText(mContext,"Cannot review while workout in progress",Toast.LENGTH_SHORT);
+                }else {
+                    System.out.println("Menu: View Analysis");
+                    Intent intent_review = new Intent(MenuScreen.this, SelectWorkout.class);
+                    String[] List = fileList();
+                    Arrays.sort(List);
+                    intent_review.putExtra("ListData", List);
+                    intent_review.putExtra("Title", "Select Past Workout");
+                    startActivityForResult(intent_review, 1);
+                }
                 break;
             case R.id.nav_workout_start:
                 System.out.println("Menu: Start Workout");
+                if(mWorkoutInProgress == workoutState.WORKOUT){
+                    mDialogEndWorkout.show();
+                }
+                else{
+                    mDialogCreateWorkout.show();
+                }
                 break;
         }
         DrawerLayout drawer = (DrawerLayout) findViewById(R.id.drawer_layout);
@@ -260,7 +302,7 @@ public class MenuScreen extends AppCompatActivity implements NavigationView.OnNa
         Arrays.sort(data);
         intent_review.putExtra("ListData", Constants.ExerciseList);
         intent_review.putExtra("Title", "Choose Next Exercise");
-        startActivityForResult(intent_review, 1);
+        startActivityForResult(intent_review, SELECT_EXERCISE);
     }
 
     private void hideAllCharts() {
@@ -341,11 +383,6 @@ public class MenuScreen extends AppCompatActivity implements NavigationView.OnNa
         if(resultCode == Activity.RESULT_OK){
             switch(requestCode) {
                 case SELECT_WORKOUT:
-                    /*
-                    mLineChart.clear();
-                    mPieChart.clear();
-                    hideAllCharts();
-                    */
                     String filename = data.getStringExtra("result");
                     System.out.println("Chose workout: " + filename);
                     try {
@@ -357,13 +394,16 @@ public class MenuScreen extends AppCompatActivity implements NavigationView.OnNa
                         System.out.println("Could not load saved workout");
                     }
                     mWorkoutInProgress = workoutState.REVIEW;
+                    invalidateOptionsMenu();
                     break;
                 case SELECT_EXERCISE:
-                    String exercise2 = data.getStringExtra("result");
-                    System.out.println("Chose exercise: " + exercise2);
+                    String exercise_name = data.getStringExtra("result");
+                    System.out.println("Chose exercise: " + exercise_name);
+                    mExercise.mExercise = exercise_name;
                     break;
                 case REVIEW_EXERCISE:
                     mWorkoutInProgress = workoutState.REVIEW;
+                    invalidateOptionsMenu();
                     String exercise = data.getStringExtra("result");
                     int index = data.getIntExtra("index", -1);
                     System.out.println("Index: " + index);
@@ -631,6 +671,7 @@ public class MenuScreen extends AppCompatActivity implements NavigationView.OnNa
         createDialogEndWorkout();
         createDialogNextExercise();
         createDialogEndExercise();
+        createDialogDeleteFiles();
     }
 
     public void createDialogConnect(){
@@ -679,7 +720,10 @@ public class MenuScreen extends AppCompatActivity implements NavigationView.OnNa
 
         mDialogCreateWorkout.setPositiveButton("Start Workout", new DialogInterface.OnClickListener() {
             public void onClick(DialogInterface dialog, int id) {
-                System.out.println("Bluetooth connect");
+                System.out.println("New workout");
+                mWorkoutInProgress = workoutState.WORKOUT;
+                mWorkout = new Workout(mContext);
+                invalidateOptionsMenu();
             }
         });
         mDialogCreateWorkout.setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
@@ -698,6 +742,16 @@ public class MenuScreen extends AppCompatActivity implements NavigationView.OnNa
         mDialogEndWorkout.setPositiveButton("End Workout", new DialogInterface.OnClickListener() {
             public void onClick(DialogInterface dialog, int id) {
                 System.out.println("End workout");
+                try{
+                    mWorkout.writeFile();
+                    mWorkoutInProgress = workoutState.NONE;
+                    mWorkout = null;
+                    mHeartRate = null;
+                    mExercise = null;
+                    invalidateOptionsMenu();
+                }catch(Exception ex){
+
+                }
             }
         });
         mDialogEndWorkout.setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
@@ -716,6 +770,10 @@ public class MenuScreen extends AppCompatActivity implements NavigationView.OnNa
         mDialogNextExercise.setPositiveButton("Next Exercise", new DialogInterface.OnClickListener() {
             public void onClick(DialogInterface dialog, int id) {
                 System.out.println("Next exercise");
+                mExercise = new Exercise();
+                chooseExercise();
+                mExerciseInProgress = true;
+                invalidateOptionsMenu();
             }
         });
         mDialogNextExercise.setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
@@ -733,10 +791,37 @@ public class MenuScreen extends AppCompatActivity implements NavigationView.OnNa
 
         mDialogEndExercise.setPositiveButton("End Exercise", new DialogInterface.OnClickListener() {
             public void onClick(DialogInterface dialog, int id) {
+                try{
+                    mWorkout.getMotion().AddExerciseData(mExercise);
+                    mExercise = null;
+                    mExerciseInProgress = false;
+                    invalidateOptionsMenu();
+                }catch(JSONException ex){
+                    Toast.makeText(mContext,"Error with exercise. Discarding data.",Toast.LENGTH_SHORT);
+                }
                 System.out.println("End exercise");
             }
         });
         mDialogEndExercise.setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
+            public void onClick(DialogInterface dialog, int id) {
+                System.out.println("cancel");
+            }
+        });
+    }
+
+    public void createDialogDeleteFiles(){
+        mDialogDeleteFiles = new AlertDialog.Builder(this);
+        mDialogDeleteFiles.setMessage("Erase all saved workouts?")
+                .setTitle("Erase Files")
+                .setIcon(R.drawable.ic_backspace_24dp);
+
+        mDialogDeleteFiles.setPositiveButton("Erase All", new DialogInterface.OnClickListener() {
+            public void onClick(DialogInterface dialog, int id) {
+                System.out.println("Delete all files");
+                DeleteAllFiles();
+            }
+        });
+        mDialogDeleteFiles.setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
             public void onClick(DialogInterface dialog, int id) {
                 System.out.println("cancel");
             }

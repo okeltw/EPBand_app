@@ -22,7 +22,7 @@
 
     <item
         android:id="@+id/bluetooth_status"
-        android:orderInCategory="3"
+        android:orderInCategory="4"
         android:title="Bluetooth"
         app:showAsAction="always"
         android:icon="@drawable/ic_bluetooth_24dp"
@@ -30,7 +30,7 @@
 
     <item
         android:id="@+id/time_toggle"
-        android:orderInCategory="2"
+        android:orderInCategory="3"
         android:title="Toggle Time"
         app:showAsAction="always"
         android:icon="@drawable/ic_timer"
@@ -38,11 +38,26 @@
 
     <item
         android:id="@+id/graph_toggle"
-        android:orderInCategory="1"
+        android:orderInCategory="2"
         android:title="Toggle Graph"
         app:showAsAction="always"
         android:icon="@drawable/ic_chart_24dp"
         android:visible="true" />
 
+    <item
+        android:id="@+id/exercise_on"
+        android:orderInCategory="1"
+        android:title="New Exercise"
+        app:showAsAction="always"
+        android:icon="@drawable/ic_add_24dp"
+        android:visible="true" />
+
+    <item
+        android:id="@+id/exercise_off"
+        android:orderInCategory="1"
+        android:title="Finish Exercise"
+        app:showAsAction="always"
+        android:icon="@drawable/ic_stop_24dp"
+        android:visible="true" />
 
 </menu>
