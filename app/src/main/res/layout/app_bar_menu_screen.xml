@@ -6,6 +6,7 @@
     android:layout_height="match_parent"
     android:fitsSystemWindows="true"
     android:background="@color/colorPrimaryDark"
+    android:layout_gravity="bottom|center"
     tools:context="uc.epband.MenuScreen">
 
     <android.support.design.widget.AppBarLayout
@@ -26,28 +27,33 @@
 
     <ImageView
         android:id="@+id/background_image"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent" />
+        android:layout_width="fill_parent"
+        android:layout_height="fill_parent"
+        android:layout_marginTop="?attr/actionBarSize"
+        android:layout_marginBottom="@dimen/fab_margin"/>
 
     <com.github.mikephil.charting.charts.PieChart
         android:id="@+id/piechart"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
+        android:layout_width="fill_parent"
+        android:layout_height="fill_parent"
         android:layout_marginTop="?attr/actionBarSize"
         android:layout_marginBottom="@dimen/fab_margin"/>
 
     <com.github.mikephil.charting.charts.LineChart
         android:id="@+id/linechart"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
+        android:layout_width="fill_parent"
+        android:layout_height="fill_parent"
         android:layout_marginTop="?attr/actionBarSize"
         android:layout_marginBottom="@dimen/fab_margin"/>
 
-    <com.github.mikephil.charting.charts.BarChart
-        android:id="@+id/barchart"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
+    <ListView
+        android:layout_width="fill_parent"
+        android:layout_height="fill_parent"
+        android:id="@+id/summaryList"
+        android:choiceMode="none"
+        android:background="@color/colorPrimaryDark"
+        android:divider="@color/colorSecondary"
         android:layout_marginTop="?attr/actionBarSize"
-        android:layout_marginBottom="@dimen/fab_margin" />
+        android:layout_marginBottom="@dimen/fab_margin"/>
 
 </android.support.design.widget.CoordinatorLayout>

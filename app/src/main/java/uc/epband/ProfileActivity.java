@@ -9,7 +9,7 @@ import android.view.View;
 import android.widget.EditText;
 import android.widget.ToggleButton;
 
-public class ProfileActivity extends AppCompatActivity {
+public class ProfileActivity extends AppCompatActivity implements Constants {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -18,7 +18,7 @@ public class ProfileActivity extends AppCompatActivity {
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
 
-        int[] profile = GetProfile("test");
+        int[] profile = GetProfile(DefaultPreferenceFile);
         EditText Age = (EditText) findViewById(R.id.editTextAge);
         EditText Height = (EditText) findViewById(R.id.editTextHeight);
         EditText Weight = (EditText) findViewById(R.id.editTextWeight);
@@ -55,7 +55,7 @@ public class ProfileActivity extends AppCompatActivity {
                 int rom = Integer.parseInt(ROM.getText().toString());
                 boolean gender = Gender.isChecked();
 
-                SetProfile("test", height, weight, age, rom, gender);
+                SetProfile(DefaultPreferenceFile, height, weight, age, rom, gender);
                 finish();
             }
         });

@@ -21,6 +21,7 @@ import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.widget.ListView;
 import android.widget.Toast;
 
 import com.github.mikephil.charting.charts.LineChart;
@@ -37,7 +38,7 @@ import java.util.List;
 import java.lang.Math;
 import org.json.*;
 
-public class MenuScreen extends AppCompatActivity implements NavigationView.OnNavigationItemSelectedListener {
+public class MenuScreen extends AppCompatActivity implements NavigationView.OnNavigationItemSelectedListener, Constants {
     private Workout mWorkout = null;
     private HeartRate mHeartRate = null;
     private Motion mMotion = null;
@@ -55,6 +56,7 @@ public class MenuScreen extends AppCompatActivity implements NavigationView.OnNa
     private graphState mGraphState;
     private LineChart mLineChart;
     private PieChart mPieChart;
+    private ListView mSummaryList;
 
     private Context mContext;
     private AlertDialog.Builder mDialogConnect, mDialogDisconnect, mDialogCreateWorkout, mDialogEndWorkout,
@@ -129,10 +131,24 @@ public class MenuScreen extends AppCompatActivity implements NavigationView.OnNa
 
         BTservice = new BluetoothBandService(mContext, mHandler);
 
+        String[] files = fileList();
+        Boolean[] examplesPresent = {false, false};
+        for(String f: files){
+            if(f.equals("Example_1")){
+                examplesPresent[0] = true;
+            }
+            else if(f.equals("Example_2")){
+                examplesPresent[1] = true;
+            }
+        }
+        if(!examplesPresent[0]) SampleWorkout1();
+        if(!examplesPresent[1]) SampleWorkout2();
+
         //Setup graph variables
         mGraphState = graphState.HEARTRATE_REALTIME;
         mLineChart = (LineChart)findViewById(R.id.linechart);
         mPieChart = (PieChart)findViewById(R.id.piechart);
+        mSummaryList = (ListView) findViewById(R.id.summaryList);
 
         mExerciseInProgress = false;
         mWorkoutInProgress = workoutState.NONE;
@@ -222,12 +238,6 @@ public class MenuScreen extends AppCompatActivity implements NavigationView.OnNa
             case R.id.delete_files:
                 mDialogDeleteFiles.show();
                 break;
-            case R.id.workout1:
-                SampleWorkout1();
-                break;
-            case R.id.workout2:
-                SampleWorkout2();
-                break;
             case R.id.time_toggle:
                 OptionCallbackTimeSwitch();
                 break;
@@ -286,8 +296,11 @@ public class MenuScreen extends AppCompatActivity implements NavigationView.OnNa
                 if(mWorkoutInProgress == workoutState.WORKOUT){
                     mDialogEndWorkout.show();
                 }
-                else{
+                else if(BTservice.isConnected()){
                     mDialogCreateWorkout.show();
+                }
+                else{
+                    Toast.makeText(mContext,"Must be connected to EP Band",Toast.LENGTH_SHORT).show();
                 }
                 break;
         }
@@ -306,18 +319,9 @@ public class MenuScreen extends AppCompatActivity implements NavigationView.OnNa
     }
 
     private void hideAllCharts() {
-        findViewById(R.id.piechart).setVisibility(View.INVISIBLE);
-        findViewById(R.id.barchart).setVisibility(View.INVISIBLE);
-        findViewById(R.id.linechart).setVisibility(View.INVISIBLE);
-    }
-
-    private int GetMHR(){
-        int[] stats = GetProfile();
-        return stats[4];
-    }
-
-    private int[] GetProfile(){
-        return GetProfile("test");
+        mSummaryList.setVisibility(View.INVISIBLE);
+        mPieChart.setVisibility(View.INVISIBLE);
+        mLineChart.setVisibility(View.INVISIBLE);
     }
 
     private int[] GetProfile(String filename) {
@@ -350,13 +354,23 @@ public class MenuScreen extends AppCompatActivity implements NavigationView.OnNa
         }
     }
 
+    private void DeleteAllFilesAndExamples(){
+        System.out.println("Deleting all EPBand files and Examples.");
+        String[] List = fileList();
+        for(String f: List){
+            deleteFile(f);
+            System.out.println("\tDeleted: " + f);
+        }
+        System.out.println("Delete finished.\n");
+    }
+
     private void DeleteAllFiles(){
         System.out.println("Deleting all EPBand files.");
         String[] List = fileList();
         for(String f: List){
             if(f.startsWith(Constants.EXAMPLE) && !f.contains("(")) {
-                deleteFile(f);
-                System.out.println("\tDeleted: " + f);
+                //deleteFile(f);
+                System.out.println("\tKept: " + f);
             }else{
                 deleteFile(f);
                 System.out.println("\tDeleted: " + f);
@@ -408,6 +422,7 @@ public class MenuScreen extends AppCompatActivity implements NavigationView.OnNa
                     int index = data.getIntExtra("index", -1);
                     System.out.println("Index: " + index);
                     if (index > 0) {
+                        hideAllCharts();
                         try {
                             JSONObject jObject = mMotion.mExerciseData.getJSONObject(index-1);
                             System.out.println("Exercise JSON: " + jObject.toString());
@@ -420,6 +435,7 @@ public class MenuScreen extends AppCompatActivity implements NavigationView.OnNa
                         }
                     }
                     else if(index == 0){
+                        hideAllCharts();
                         mHeartRate.PlotAll(mLineChart);
                         mGraphState = graphState.HEARTRATE_REALTIME;
                         System.out.println("Chose to review: Heart Rate");
@@ -465,7 +481,7 @@ public class MenuScreen extends AppCompatActivity implements NavigationView.OnNa
                 Z = 0;
                 exercise.AddData(X, Y, Z, rX, rY, rZ);
             }
-            exercise.PlotAll((LineChart) findViewById(R.id.linechart));
+            //exercise.PlotAll((LineChart) findViewById(R.id.linechart));
             exercise.mExercise = "Sample Data";
             System.out.println(exercise.GetJSONString());
             mWorkout.getMotion().AddExerciseData(exercise);
@@ -499,7 +515,6 @@ public class MenuScreen extends AppCompatActivity implements NavigationView.OnNa
                 rX = 45*Math.cos(2 * Math.PI * i / 100 + Math.PI)+45;
                 exercise.AddData(X, Y, Z, rX, rY, rZ);
             }
-            exercise.PlotAll((LineChart) findViewById(R.id.linechart));
             exercise.mExercise = "Sample Data";
             System.out.println(exercise.GetJSONString());
             mWorkout.getMotion().AddExerciseData(exercise);
@@ -514,7 +529,6 @@ public class MenuScreen extends AppCompatActivity implements NavigationView.OnNa
                 rY = 45*Math.cos(2 * Math.PI * i / 100 + Math.PI)+45;
                 exercise.AddData(X, Y, Z, rX, rY, rZ);
             }
-            exercise.PlotAll((LineChart) findViewById(R.id.linechart));
             exercise.mExercise = "Sample Data2";
             System.out.println(exercise.GetJSONString());
             mWorkout.getMotion().AddExerciseData(exercise);
@@ -529,7 +543,6 @@ public class MenuScreen extends AppCompatActivity implements NavigationView.OnNa
                 rZ = 45*Math.cos(2 * Math.PI * i / 100 + Math.PI)+45;
                 exercise.AddData(X, Y, Z, rX, rY, rZ);
             }
-            exercise.PlotAll((LineChart) findViewById(R.id.linechart));
             exercise.mExercise = "Sample Data3";
             System.out.println(exercise.GetJSONString());
             mWorkout.getMotion().AddExerciseData(exercise);
@@ -551,22 +564,18 @@ public class MenuScreen extends AppCompatActivity implements NavigationView.OnNa
             return;
         }
         else if(mWorkoutInProgress != workoutState.NONE){
-            redrawGraph();
             hideAllCharts();
             switch (mGraphState) {
                 case HEARTRATE_REALTIME:
                     System.out.println("updateGraphVisibility() for HEARTRATE_REALTIME");
-                    mLineChart.setVisibility(View.VISIBLE);
                     mWorkout.plotHeartRateRealTime(mLineChart);
                     break;
                 case HEARTRATE_SUMMARY:
                     System.out.println("updateGraphVisibility() for HEARTRATE_SUMMARY");
-                    mPieChart.setVisibility(View.VISIBLE);
                     mWorkout.plotHeartRateSummary(mPieChart);
                     break;
                 case MOTION_REALTIME:
                     System.out.println("updateGraphVisibility() for MOTION_REALTIME");
-                    mLineChart.setVisibility(View.VISIBLE);
                     try{
                         mExercise.PlotAll(mLineChart);
                     }catch (JSONException ex){
@@ -575,30 +584,12 @@ public class MenuScreen extends AppCompatActivity implements NavigationView.OnNa
                     break;
                 case MOTION_SUMMARY:
                     System.out.println("updateGraphVisibility() for MOTION_SUMMARY");
-                    //mPieChart.setVisibility(View.VISIBLE);
-
+                    mExercise.DisplaySummary(mContext, mSummaryList);
                     break;
             }
         }
     }
 
-    private void redrawGraph(){
-        System.out.println("redrawGraph()");
-        switch (mGraphState){
-            case HEARTRATE_REALTIME:
-            case MOTION_REALTIME:
-                //mLineChart.invalidate();
-                break;
-
-            case HEARTRATE_SUMMARY:
-                //mPieChart.invalidate();
-                break;
-            case MOTION_SUMMARY:
-
-                break;
-
-        }
-    }
 
     private void OptionCallbackTimeSwitch(){
         System.out.println("OptionCallbackTimeSwitch()");
@@ -787,16 +778,17 @@ public class MenuScreen extends AppCompatActivity implements NavigationView.OnNa
         mDialogEndExercise = new AlertDialog.Builder(this);
         mDialogEndExercise.setMessage("End current exercise?")
                 .setTitle("Exercise")
-                .setIcon(R.drawable.ic_clear_24dp);
+                .setIcon(R.drawable.ic_stop_24dp);
 
         mDialogEndExercise.setPositiveButton("End Exercise", new DialogInterface.OnClickListener() {
             public void onClick(DialogInterface dialog, int id) {
                 try{
+                    mExercise.SetEndTime(new Date());
                     mWorkout.getMotion().AddExerciseData(mExercise);
                     mExercise = null;
                     mExerciseInProgress = false;
                     invalidateOptionsMenu();
-                }catch(JSONException ex){
+                }catch(Exception ex){
                     Toast.makeText(mContext,"Error with exercise. Discarding data.",Toast.LENGTH_SHORT);
                 }
                 System.out.println("End exercise");
@@ -818,10 +810,16 @@ public class MenuScreen extends AppCompatActivity implements NavigationView.OnNa
         mDialogDeleteFiles.setPositiveButton("Erase All", new DialogInterface.OnClickListener() {
             public void onClick(DialogInterface dialog, int id) {
                 System.out.println("Delete all files");
+                DeleteAllFilesAndExamples();
+            }
+        });
+        mDialogDeleteFiles.setNegativeButton("Erase Non Example", new DialogInterface.OnClickListener() {
+            public void onClick(DialogInterface dialog, int id) {
+                System.out.println("Delete all non-example files");
                 DeleteAllFiles();
             }
         });
-        mDialogDeleteFiles.setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
+        mDialogDeleteFiles.setNeutralButton("Cancel", new DialogInterface.OnClickListener() {
             public void onClick(DialogInterface dialog, int id) {
                 System.out.println("cancel");
             }

@@ -1,11 +1,15 @@
 package uc.epband;
 
+import android.content.Context;
+import android.content.SharedPreferences;
 import android.graphics.Color;
+import android.util.EventLogTags;
 import android.view.View;
 
 import com.github.mikephil.charting.charts.LineChart;
 import com.github.mikephil.charting.charts.PieChart;
 import com.github.mikephil.charting.components.Legend;
+import com.github.mikephil.charting.components.LimitLine;
 import com.github.mikephil.charting.components.XAxis;
 import com.github.mikephil.charting.components.YAxis;
 import com.github.mikephil.charting.data.Entry;
@@ -14,6 +18,7 @@ import com.github.mikephil.charting.data.LineDataSet;
 import com.github.mikephil.charting.data.PieData;
 import com.github.mikephil.charting.data.PieDataSet;
 import com.github.mikephil.charting.data.PieEntry;
+import com.github.mikephil.charting.formatter.DefaultAxisValueFormatter;
 import com.github.mikephil.charting.formatter.PercentFormatter;
 
 import org.json.JSONArray;
@@ -25,13 +30,19 @@ import java.util.Date;
 import java.util.List;
 
 public class HeartRate implements Constants{
-    private Boolean mValid = false, mAnalyzed = false;
-    private double mUnread = 0, mRest = 0, mAerobic = 0, mAnaerobic = 0;
-    private String mSampleStep = "";
-    private JSONArray mRawBPM = new JSONArray();
+    private double mUnread, mRest, mAerobic, mAnaerobic;
+    private String mSampleStep;
+    private JSONArray mRawBPM;
+    private int mMHR;
 
     public HeartRate(){
-
+        mRawBPM = new JSONArray();
+        mSampleStep = "";
+        mUnread = 0;
+        mRest = 0;
+        mAerobic = 0;
+        mAnaerobic = 0;
+        mMHR = 220;
     }
 
     public HeartRate(String jString) throws JSONException{
@@ -48,27 +59,28 @@ public class HeartRate implements Constants{
         return true;
     }
 
+    public void updateMHR(Context context){
+        SharedPreferences Settings = context.getSharedPreferences(DefaultPreferenceFile, context.MODE_PRIVATE);
+        mMHR = Settings.getInt("MHR",220);
+        System.out.println("Update heart rate with MHR: " + mMHR);
+    }
+
     public void SetSampleRate(Date sample_time){
         mSampleStep = C_TIME_FORMAT.format(sample_time);
     }
 
     public Boolean UseJSONObject(JSONObject jObject) throws JSONException{
-        mValid = false;
         mRawBPM = jObject.getJSONArray(RAW_BPM);
         mUnread = jObject.getDouble(UNREAD);
         mRest = jObject.getDouble(REST);
         mAerobic = jObject.getDouble(AEROBIC);
         mAnaerobic = jObject.getDouble(ANAEROBIC);
-        mValid = jObject.getBoolean(VALID);
-        mAnalyzed = jObject.getBoolean(ANALYZED);
         mSampleStep = jObject.getString(SAMPLE_STEP);
-        return mValid;
+        return true;
     }
 
     public JSONObject GetJSONObject() throws JSONException{
         JSONObject jObject = new JSONObject();
-        jObject.put(VALID, mValid);
-        jObject.put(ANALYZED, mAnalyzed);
         jObject.put(UNREAD, mUnread);
         jObject.put(REST, mRest);
         jObject.put(AEROBIC, mAerobic);
@@ -90,47 +102,18 @@ public class HeartRate implements Constants{
 
     public void AddData(int BPM){
         mRawBPM.put(BPM);
-        mAnalyzed = false;
     }
 
     public void AddData(int[] BPM){
         for(int i = 0; i < BPM.length; i++){
             mRawBPM.put(BPM[i]);
         }
-        mAnalyzed = false;
     }
 
     public void AddData(JSONArray BPM) throws JSONException{
         for(int i = 0; i < BPM.length(); i++){
             mRawBPM.put(BPM.getInt(i));
         }
-    }
-
-    public void CalculateSummary(int MHR) throws JSONException{
-        mUnread = 0;
-        mRest = 0;
-        mAerobic = 0;
-        mUnread = 0;
-
-        System.out.println("Heart Rate Summary of " + mRawBPM.length() + " points\n" + mRawBPM);
-        double value;
-        for(int i = 0; i < mRawBPM.length(); i++){
-            value = mRawBPM.getInt(i);
-            if( value < HR_REST*MHR){
-                mUnread++;
-            }
-            else if( value < HR_AEROBIC*MHR){
-                mRest++;
-            }
-            else if( value < HR_ANAEROBIC*MHR){
-                mAerobic++;
-            }
-            else{
-                mAnaerobic++;
-            }
-        }
-        mValid = true;
-        mAnalyzed = true;
     }
 
     public void PlotAll(LineChart chart) {
@@ -144,93 +127,156 @@ public class HeartRate implements Constants{
         }
 
         // VISIBILITY ON
-        //chart.setVisibility(View.VISIBLE);
+        chart.setVisibility(View.VISIBLE);
 
         // CREATE DATA
-        LineDataSet dataSet = new LineDataSet(entries, "Line Graph");
-        dataSet.setDrawFilled(true);
-        dataSet.setFillColor(Color.RED);
+        if(entries.isEmpty()){
+            chart.clear();
+        }else {
+            LineDataSet dataSet = new LineDataSet(entries, "Line Graph");
 
-        // DATA POINT STYLE SETTINGS
-        dataSet.setColor(Color.WHITE);
-        dataSet.setCircleColor(Color.WHITE);
-        dataSet.setCircleColorHole(Color.WHITE);
-        dataSet.setCircleHoleRadius(1f);
-        dataSet.setCircleRadius(2f);
+            // DATA POINT STYLE SETTINGS
+            dataSet.setColor(Color.RED);
+            dataSet.setCircleColor(Color.RED);
+            dataSet.setCircleColorHole(Color.BLACK);
+            dataSet.setCircleHoleRadius(2f);
+            dataSet.setCircleRadius(3f);
 
-        // CHART STYLE SETTINGS
-        chart.setVisibility(View.VISIBLE);
-        XAxis x = chart.getXAxis();
-        YAxis y = chart.getAxisLeft();
-        x.setEnabled(true);
-        x.setAxisMinimum(0.0f);
-        x.setAxisMaximum(entries.size());
-        y.setAxisMaximum(220.0f);
-        y.setAxisMinimum(0.0f);
-        y.setDrawLabels(true);
-        y.setLabelCount(5, true);
-        y.setTextColor(Color.WHITE);
-        y.setGranularity(40.0f);
+            // CHART STYLE SETTINGS
+            XAxis x = chart.getXAxis();
 
-        //chart.getAxisLeft().setDrawTopYLabelEntry(true);
-        chart.getAxisLeft().setEnabled(false);
+            x.setValueFormatter(new TimeFormatter(100));
+            x.setEnabled(true);
+            x.setAxisMaximum(entries.size());
+            x.setLabelCount(5, true);
+            x.setTextColor(Color.WHITE);
+            x.setPosition(XAxis.XAxisPosition.BOTTOM);
 
-        // LEGEND SETTINGS
-        Legend legend = chart.getLegend();
-        legend.setEnabled(false);
+            YAxis y = chart.getAxisLeft();
+            y.removeAllLimitLines();
+            y.setValueFormatter(new HeartRateFormater());
+            y.setEnabled(true);
+            y.setAxisMaximum(220f);
+            y.setAxisMinimum(0.0f);
+            y.setDrawLabels(true);
+            y.setLabelCount(5, true);
+            y.setTextColor(Color.WHITE);
 
+            chart.getAxisRight().setEnabled(false);
+
+            // LEGEND SETTINGS
+            Legend legend = chart.getLegend();
+            legend.setEnabled(false);
+
+            // Limit lines for Heart Rate Levels
+            LineData lineData = new LineData(dataSet);
+            chart.setDragEnabled(true);
+            chart.setPinchZoom(true);
+            chart.setData(lineData);
+
+            String Label1 = REST + " " + Math.round(HR_REST * 100) + "% MHR";
+            String Label2 = AEROBIC + " " + Math.round(HR_AEROBIC*100) + "% MHR";
+            String Label3 = ANAEROBIC + " " + Math.round(HR_ANAEROBIC*100) + "% MHR";
+            String Label4 = "MHR " + mMHR + " BPM";
+
+            LimitLine Line1 = getLimitLine(HR_REST * mMHR, Label1, Color.parseColor(HEX_DODGERBLUE));
+            LimitLine Line2 = getLimitLine(HR_AEROBIC * mMHR, Label2, Color.parseColor(HEX_GOLD));
+            LimitLine Line3 = getLimitLine(HR_ANAEROBIC * mMHR, Label3, Color.parseColor(HEX_RUBY));
+            LimitLine Line4 = getLimitLine(mMHR, Label4, Color.WHITE);
+
+            y.addLimitLine(Line1);
+            y.addLimitLine(Line2);
+            y.addLimitLine(Line3);
+            y.addLimitLine(Line4);
+        }
         // REFRESH
-        LineData lineData = new LineData(dataSet);
-        chart.setData(lineData);
+        chart.notifyDataSetChanged();
         chart.invalidate();
+    }
+
+    public LimitLine getLimitLine(float value, String label, int color){
+        LimitLine returnLine = new LimitLine(value, label);
+        returnLine.setLineColor(color);
+        returnLine.setTextColor(Color.WHITE);
+        returnLine.setLabelPosition(LimitLine.LimitLabelPosition.RIGHT_BOTTOM);
+        returnLine.setLineWidth(1f);
+        returnLine.setTextSize(14f);
+        return returnLine;
     }
 
     public void PlotSummary(PieChart chart) {
         // VISIBILITY ON
-        //chart.setVisibility(View.VISIBLE);
+        chart.setVisibility(View.VISIBLE);
         try{
-            if(mAnalyzed == false) CalculateSummary(220);
+            mUnread = 0;
+            mRest = 0;
+            mAerobic = 0;
+            mAnaerobic = 0;
+
+            System.out.println("Heart Rate Summary of " + mRawBPM.length() + " points\n" + mRawBPM);
+            for(int i = 0; i < mRawBPM.length(); i++){
+                double value = mRawBPM.getInt(i);
+                if( value < HR_REST*mMHR){
+                    mUnread++;
+                }
+                else if( value < HR_AEROBIC*mMHR){
+                    mRest++;
+                }
+                else if( value < HR_ANAEROBIC*mMHR){
+                    mAerobic++;
+                }
+                else{
+                    mAnaerobic++;
+                }
+            }
         }
         catch (JSONException ex){
             System.out.println("JSONException during HeartRate Summary Calculation");
         }
 
-        // CREATE DATA
-        List<PieEntry> entries = new ArrayList<>();
-        entries.add(new PieEntry((float)mUnread, "Resting (0% - 60% MHR)"));
-        entries.add(new PieEntry((float)mRest, "Recovery (60% - 70% MHR)"));
-        entries.add(new PieEntry((float)mAerobic, "Aerobic (70% - 80% MHR)"));
-        entries.add(new PieEntry((float) mAnaerobic, "Anaerobic (80% - 100% MHR)"));
-        PieDataSet set = new PieDataSet(entries, "Heart Rate Levels as Percent of Time");
+        if(mUnread + mRest + mAerobic + mAnaerobic > 0) {
+            // CREATE DATA
+            List<PieEntry> entries = new ArrayList<>();
+            entries.add(new PieEntry((float) mUnread, "Resting (0% - 60% MHR)"));
+            entries.add(new PieEntry((float) mRest, "Recovery (60% - 70% MHR)"));
+            entries.add(new PieEntry((float) mAerobic, "Aerobic (70% - 80% MHR)"));
+            entries.add(new PieEntry((float) mAnaerobic, "Anaerobic (80% - 100% MHR)"));
 
-        // CHART STYLE SETTINGS
-        set.setColors(Color.rgb(160, 160, 160), Color.rgb(0, 128, 255), Color.rgb(255, 255, 0), Color.rgb(255, 0, 0));
-        PieData data = new PieData(set);
-        data.setValueTextSize(16.0f);
-        data.setValueTextColor(Color.BLACK);
-        chart.setEntryLabelTextSize(24.0f);
-        chart.setUsePercentValues(true);
-        chart.setHoleRadius(0f);
-        chart.setTransparentCircleAlpha(0);
+            // CHART STYLE SETTINGS
+            PieDataSet set = new PieDataSet(entries, "Heart Rate Levels as Percent of Time");
+            set.setColors(Color.rgb(160, 160, 160), Color.rgb(0, 128, 255), Color.rgb(255, 255, 0), Color.rgb(255, 0, 0));
 
-        data.setValueFormatter(new PercentFormatter());
+            PieData data = new PieData(set);
+            data.setValueTextSize(16.0f);
+            data.setValueTextColor(Color.BLACK);
 
-        // Don't use labels on chart
-        chart.setDrawEntryLabels(false);
+            chart.setEntryLabelTextSize(24.0f);
+            chart.setUsePercentValues(true);
+            chart.setHoleRadius(0f);
+            chart.setTransparentCircleAlpha(0);
 
-        // LEGEND SETTINGS
-        Legend legend = chart.getLegend();
-        legend.setEnabled(true);
-        legend.setTextColor(Color.rgb(255, 255, 255));
-        legend.setTextSize(16.0f);
-        //legend.setTypeface(Typeface TF);
-        legend.setForm(Legend.LegendForm.CIRCLE);
-        legend.setOrientation(Legend.LegendOrientation.HORIZONTAL);
-        legend.setWordWrapEnabled(true);
+            data.setValueFormatter(new PercentFormatter());
 
-        // SET DATA AND UPDATE CHART
-        chart.setDescription(null);
-        chart.setData(data);
+            // Don't use labels on chart
+            chart.setDrawEntryLabels(false);
+
+            // LEGEND SETTINGS
+            Legend legend = chart.getLegend();
+            legend.setEnabled(true);
+            legend.setTextColor(Color.rgb(255, 255, 255));
+            legend.setTextSize(16.0f);
+            legend.setForm(Legend.LegendForm.CIRCLE);
+            legend.setOrientation(Legend.LegendOrientation.HORIZONTAL);
+            legend.setWordWrapEnabled(true);
+
+            // SET DATA AND UPDATE CHART
+            chart.setDescription(null);
+
+            System.out.println("Piechart data: " + chart.getData());
+            chart.setData(data);
+        }
+        else chart.clear();
+        chart.notifyDataSetChanged();
         chart.invalidate(); // refresh
     }
 }

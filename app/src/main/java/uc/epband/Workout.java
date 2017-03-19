@@ -58,14 +58,6 @@ public class Workout implements Constants{
         return mHeartRate;
     }
 
-    public void setMotion(Motion motion){
-        mMotion = motion;
-    }
-
-    public void setHeartRate(HeartRate heartrate){
-        mHeartRate = heartrate;
-    }
-
     public String readFile(String filename) throws IOException {
         FileInputStream fileStream = mContext.openFileInput(filename);
         int size = fileStream.available();
@@ -116,27 +108,18 @@ public class Workout implements Constants{
         return filename;
     }
 
-    private void AppendFile(String filename, String message) throws IOException {
-        FileOutputStream f = mContext.openFileOutput(filename, Context.MODE_APPEND);
-        f.write(message.getBytes());
-        f.close();
-    }
-
     public void plotHeartRateRealTime(LineChart chart){
-        if(!mHeartRate.equals(null)) mHeartRate.PlotAll(chart);
+        if(!mHeartRate.equals(null)){
+            mHeartRate.updateMHR(mContext);
+            mHeartRate.PlotAll(chart);
+        }
     }
 
     public void plotHeartRateSummary(PieChart chart){
-        if(!mHeartRate.equals(null)) mHeartRate.PlotSummary(chart);
-    }
-
-    public void plotMotionRealTime(LineChart chart){
-        if(mMotion == null) return;
-    }
-
-    public void plotMotionSummary(PieChart chart){
-        System.out.println("Motion Summary not implemented");
-        if(mMotion == null) return;
+        if(!mHeartRate.equals(null)){
+            mHeartRate.updateMHR(mContext);
+            mHeartRate.PlotSummary(chart);
+        }
     }
 
 }

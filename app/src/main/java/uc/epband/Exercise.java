@@ -1,8 +1,11 @@
 package uc.epband;
 
+import android.content.Context;
 import android.graphics.Color;
 import android.util.Size;
 import android.view.View;
+import android.widget.ArrayAdapter;
+import android.widget.ListView;
 
 import com.github.mikephil.charting.charts.LineChart;
 import com.github.mikephil.charting.components.Legend;
@@ -199,12 +202,12 @@ public class Exercise implements Constants{
         ArrayList<Entry> dX = GetDataset(mDistX), dY = GetDataset(mDistY), dZ = GetDataset(mDistZ),
                         rX = GetDataset(mRotX), rY = GetDataset(mRotY), rZ = GetDataset(mRotZ);
 
-        lines = MultipleLines(lines, dX, "X Distance", C_X, YAxis.AxisDependency.LEFT);
-        lines = MultipleLines(lines, dY, "Y Distance", C_Y, YAxis.AxisDependency.LEFT);
-        lines = MultipleLines(lines, dZ, "Z Distance", C_Z, YAxis.AxisDependency.LEFT);
-        lines = MultipleLines(lines, rX, "X Angle", C_RX, YAxis.AxisDependency.RIGHT);
-        lines = MultipleLines(lines, rY, "Y Angle", C_RY, YAxis.AxisDependency.RIGHT);
-        lines = MultipleLines(lines, rZ, "Z Angle", C_RZ, YAxis.AxisDependency.RIGHT);
+        if(!dX.isEmpty()) lines = MultipleLines(lines, dX, "X Distance", C_X, YAxis.AxisDependency.LEFT);
+        if(!dY.isEmpty()) lines = MultipleLines(lines, dY, "Y Distance", C_Y, YAxis.AxisDependency.LEFT);
+        if(!dZ.isEmpty()) lines = MultipleLines(lines, dZ, "Z Distance", C_Z, YAxis.AxisDependency.LEFT);
+        if(!rX.isEmpty()) lines = MultipleLines(lines, rX, "X Angle", C_RX, YAxis.AxisDependency.RIGHT);
+        if(!rY.isEmpty()) lines = MultipleLines(lines, rY, "Y Angle", C_RY, YAxis.AxisDependency.RIGHT);
+        if(!rZ.isEmpty()) lines = MultipleLines(lines, rZ, "Z Angle", C_RZ, YAxis.AxisDependency.RIGHT);
 
         Legend legend = chart.getLegend();
         legend.setEnabled(true);
@@ -212,33 +215,43 @@ public class Exercise implements Constants{
         legend.setWordWrapEnabled(true);
 
         chart.setVisibility(View.VISIBLE);
-        chart.setPinchZoom(false);
-        chart.setDoubleTapToZoomEnabled(false);
-        chart.setDragEnabled(false);
-        chart.setScaleEnabled(false);
+        chart.setPinchZoom(true);
+        chart.setDoubleTapToZoomEnabled(true);
+        chart.setDragEnabled(true);
+        //chart.setScaleEnabled(false);
 
         XAxis x = chart.getXAxis();
+        x.setEnabled(true);
         x.setDrawAxisLine(true);
         x.setDrawLabels(true);
         x.setTextColor(Color.WHITE);
         x.setAxisMaximum(dX.size());
+        x.setPosition(XAxis.XAxisPosition.BOTTOM);
+        x.setValueFormatter(new TimeFormatter(10));
+
 
         YAxis yDist = chart.getAxisLeft();
         yDist.removeAllLimitLines();
         yDist.setDrawLimitLinesBehindData(true);
         yDist.resetAxisMaximum();
         yDist.resetAxisMinimum();
-        yDist.setDrawZeroLine(true);
+        yDist.setValueFormatter(new DistanceFormatter());
+        yDist.setLabelCount(9, true);
         yDist.setDrawLabels(true);
+        yDist.setTextColor(Color.WHITE);
+        yDist.setGranularity(1);
 
         YAxis yRot = chart.getAxisRight();
+        yRot.setEnabled(true);
         yRot.removeAllLimitLines();
         yRot.setDrawLimitLinesBehindData(true);
         yRot.setAxisMinimum(-180.0f);
         yRot.setAxisMaximum(180.0f);
-        yRot.setDrawZeroLine(true);
-        yRot.setDrawLabels(true);
+        yRot.setValueFormatter(new DegreesFormater());
         yRot.setLabelCount(9, true);
+        yRot.setDrawLabels(true);
+        yRot.setTextColor(Color.WHITE);
+        yRot.setGranularity(1);
 
         /*
         LimitLine[] lLine = getLimitLine(90.0f,0.0f,80.0f,"Shoulder Raise");
@@ -247,10 +260,28 @@ public class Exercise implements Constants{
         yRot.addLimitLine(lLine[2]);
         */
         System.out.println("Chart setData()");
-        chart.setData(new LineData(lines));
+
+        if(!lines.isEmpty()) {
+            chart.setData(new LineData(lines));
+            chart.setDragEnabled(true);
+            //chart.setVisibleXRangeMaximum(200);
+            //if(lines.size() > 200) chart.moveViewToX(lines.size() - 200);
+        }
+        else chart.clear();
         chart.invalidate();
         System.out.println("End plotAll()");
 
+    }
+
+    public void DisplaySummary(Context context, ListView summaryList){
+        ArrayAdapter<String> adapter = new ArrayAdapter<String>(context, android.R.layout.simple_list_item_1);
+        adapter.add("Name: " + mExercise);
+        adapter.add("Start Time: " + mStartTime);
+        adapter.add("Total Time: " + mTimeLength);
+        adapter.add("Sampled at: " + mSampleStep);
+
+        summaryList.setAdapter(adapter);
+        summaryList.setVisibility(View.VISIBLE);
     }
 
     public LimitLine[] getLimitLine(float goal, float minimum, float tolerancePercent, String label){
