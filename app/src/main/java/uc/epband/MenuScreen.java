@@ -7,6 +7,8 @@ import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.graphics.PorterDuff;
+import android.graphics.drawable.Drawable;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
@@ -51,7 +53,7 @@ public class MenuScreen extends AppCompatActivity implements NavigationView.OnNa
     private Boolean mExerciseInProgress;
 
     public enum graphState{
-        HEARTRATE_REALTIME, HEARTRATE_SUMMARY, MOTION_REALTIME, MOTION_SUMMARY
+        HEARTRATE_REALTIME, HEARTRATE_SUMMARY, MOTION_REALTIME, MOTION_SUMMARY, NONE
     }
     private graphState mGraphState;
     private LineChart mLineChart;
@@ -89,14 +91,20 @@ public class MenuScreen extends AppCompatActivity implements NavigationView.OnNa
                     byte[] readBuf = (byte[]) msg.obj;
                     // construct a string from the valid bytes in the buffer
                     String readMessage = new String(readBuf, 0, msg.arg1);
-                    System.out.println("Read: " + readMessage);
+                    System.out.println("MenuScreen: Read: " + readMessage);
+                    try {
+                        handleBluetoothData(readMessage);
+
+                    }catch (JSONException ex){
+                        System.out.println("Could not read message from EPBand, JSON Exception");
+                    }
                     //mConversationArrayAdapter.add(mConnectedDeviceName + ":  " + readMessage);
                     break;
                 case Constants.MESSAGE_DEVICE_NAME:
                     // save the connected device's name
                     String mConnectedDeviceName = msg.getData().getString(Constants.DEVICE_NAME);
                     if (null != mContext) {
-                        Toast.makeText(mContext, "Connected to "+ mConnectedDeviceName, Toast.LENGTH_SHORT).show();
+                        Toast.makeText(mContext, "MenuScreen: Connected to "+ mConnectedDeviceName, Toast.LENGTH_SHORT).show();
                     }
                     break;
                 case Constants.MESSAGE_TOAST:
@@ -107,6 +115,31 @@ public class MenuScreen extends AppCompatActivity implements NavigationView.OnNa
             }
         }
     };
+
+    void handleBluetoothData(String jString) throws JSONException{
+        JSONObject readObject = new JSONObject(jString);
+        if(mWorkoutInProgress == workoutState.WORKOUT){
+            int BPM = (int)Math.round(readObject.getDouble("BPM"));
+            mWorkout.getHeartRate().AddData(BPM);
+
+            JSONObject motionObject = readObject.getJSONObject("Motion");
+            if(mExerciseInProgress == true){
+                System.out.println("\nmExerciseInProgress");
+                JSONArray X = motionObject.getJSONArray("X");
+                JSONArray Y = motionObject.getJSONArray("Y");
+                JSONArray Z = motionObject.getJSONArray("Z");
+                JSONArray RX = motionObject.getJSONArray("RX");
+                JSONArray RY = motionObject.getJSONArray("RY");
+                JSONArray RZ = motionObject.getJSONArray("RZ");
+                System.out.println("Add data");
+                try {
+                    mExercise.AddDataJSONArray(X, Y, Z, RX, RY, RZ);
+                }catch (JSONException ex){
+                    System.out.println("AddDataJSONArray is the problem");
+                }
+            }
+        }
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -145,7 +178,7 @@ public class MenuScreen extends AppCompatActivity implements NavigationView.OnNa
         if(!examplesPresent[1]) SampleWorkout2();
 
         //Setup graph variables
-        mGraphState = graphState.HEARTRATE_REALTIME;
+        mGraphState = graphState.NONE;
         mLineChart = (LineChart)findViewById(R.id.linechart);
         mPieChart = (PieChart)findViewById(R.id.piechart);
         mSummaryList = (ListView) findViewById(R.id.summaryList);
@@ -436,7 +469,7 @@ public class MenuScreen extends AppCompatActivity implements NavigationView.OnNa
                     }
                     else if(index == 0){
                         hideAllCharts();
-                        mHeartRate.PlotAll(mLineChart);
+                        mWorkout.plotHeartRateRealTime(mLineChart);
                         mGraphState = graphState.HEARTRATE_REALTIME;
                         System.out.println("Chose to review: Heart Rate");
                     }

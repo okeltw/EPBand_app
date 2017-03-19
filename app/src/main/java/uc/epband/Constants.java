@@ -131,9 +131,7 @@ public interface Constants {
 
         private String units = " g";
 
-        public DistanceFormatter() {
-
-        }
+        public DistanceFormatter() { }
 
         @Override
         public String getFormattedValue(float value, AxisBase axis) {
@@ -157,5 +155,3 @@ public interface Constants {
         }
     }
 }
-
-

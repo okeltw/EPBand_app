@@ -241,7 +241,7 @@ public class BluetoothBandService implements Constants{
         }
 
         public void run() {
-            mmBuffer = new byte[1024];
+            mmBuffer = new byte[1024*4];
             int numBytes; // bytes returned from read()
 
             // Keep listening to the InputStream until an exception occurs.

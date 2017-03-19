@@ -136,6 +136,12 @@ public class Exercise implements Constants{
         return jObject.toString();
     }
 
+    public void AddDataJSONArray(JSONArray X, JSONArray Y, JSONArray Z, JSONArray RX, JSONArray RY, JSONArray RZ) throws JSONException{
+        for(int i = 0; i < X.length(); i++){
+            AddData(X.getDouble(i), Y.getDouble(i), Z.getDouble(i), RX.getDouble(i), RY.getDouble(i), RZ.getDouble(i));
+        }
+    }
+
     public void AddData(double distX, double distY, double distZ, double rotX, double rotY, double rotZ) throws JSONException{
         mDistX.put(distX);
         mDistY.put(distY);
