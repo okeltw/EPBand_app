@@ -32,6 +32,7 @@ public class BluetoothBandService implements Constants{
     private int mState;
     private int mNewState;
     private Context mContext;
+    private boolean bonded;
 
     private BluetoothSocket socket = null;
 
@@ -39,6 +40,13 @@ public class BluetoothBandService implements Constants{
     private ArrayList<String> mDeviceList = new ArrayList<String>();
     private Boolean mConnected = false;
     public String desiredDeviceName = Constants.DEVICE_NAME;
+
+    public void disconnected(){
+        bonded = false;
+        this.close();
+    }
+
+    public boolean isBonded() { return bonded; }
 
     // Create a BroadcastReceiver for ACTION_FOUND.
     private final BroadcastReceiver mReceiverBTDiscover = new BroadcastReceiver() {
@@ -95,6 +103,8 @@ public class BluetoothBandService implements Constants{
      * @param handler A Handler to send messages back to the UI Activity
      */
     public BluetoothBandService(Context context, Handler handler) {
+        bonded = false;
+
         mAdapter = BluetoothAdapter.getDefaultAdapter();
         mAdapter.enable();
         mAdapter.startDiscovery();
@@ -146,9 +156,13 @@ public class BluetoothBandService implements Constants{
         if( connectSocket(device) ){
             mConnectedThread = new ConnectedThread(socket);
             mConnectedThread.start();
-            return true;
+            bonded = true;
         }
-        else return false;
+        else{
+            bonded = false;
+        }
+
+        return bonded;
     }
 
     private BluetoothDevice matchBluetoothDevice() {
@@ -236,6 +250,7 @@ public class BluetoothBandService implements Constants{
                 Log.e(TAG, "Error occurred when creating output stream", e);
             }
 
+            bonded = true;
             mmInStream = tmpIn;
             mmOutStream = tmpOut;
         }
@@ -254,6 +269,9 @@ public class BluetoothBandService implements Constants{
                     Message readMsg = mHandler.obtainMessage(Constants.MESSAGE_READ, numBytes, -1, mmBuffer);
                     readMsg.sendToTarget();
                 } catch (IOException e) {
+                    bonded = false;
+                    Message errMsg = mHandler.obtainMessage(Constants.MESSAGE_DISCONNECTED);
+                    errMsg.sendToTarget();
                     System.out.println("Disconnected");
                     Log.d(TAG, "Input stream was disconnected", e);
                     break;

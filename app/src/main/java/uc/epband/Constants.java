@@ -94,7 +94,8 @@ public interface Constants {
             MESSAGE_READ = 2,
             MESSAGE_WRITE = 3,
             MESSAGE_DEVICE_NAME = 4,
-            MESSAGE_TOAST = 5;
+            MESSAGE_TOAST = 5,
+            MESSAGE_DISCONNECTED = 6;
 
     String TOAST = "toast", DEVICE_NAME = "EPBand";//"Andrew's iPhone";
 

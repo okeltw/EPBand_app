@@ -112,6 +112,12 @@ public class MenuScreen extends AppCompatActivity implements NavigationView.OnNa
                         Toast.makeText(mContext, msg.getData().getString(Constants.TOAST), Toast.LENGTH_SHORT).show();
                     }
                     break;
+                case Constants.MESSAGE_DISCONNECTED:
+                    BTservice.disconnected();
+                    System.out.println("Bluetooth Service was disconnected");
+
+                    //TODO: handle ended/saving workouts
+                    break;
             }
         }
     };
@@ -311,7 +317,7 @@ public class MenuScreen extends AppCompatActivity implements NavigationView.OnNa
         switch (id) {
             case R.id.nav_device:
                 System.out.println("Menu: Device Setup");
-                if (!BTservice.isConnected()) establishBluetooth();
+                if (!BTservice.isConnected() || !BTservice.isBonded()) establishBluetooth();
                 else{
                     if(mWorkoutInProgress == workoutState.WORKOUT){
                         Toast.makeText(mContext,"Cannot disconnect bluetooth while workout in progress",Toast.LENGTH_LONG);
