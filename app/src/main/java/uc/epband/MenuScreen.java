@@ -268,6 +268,22 @@ public class MenuScreen extends AppCompatActivity implements NavigationView.OnNa
                 String Message = (BTservice.isConnected()) ? "EP Band is Connected" : "No bluetooth connection";
                 Toast.makeText(this,Message,Toast.LENGTH_SHORT).show();
                 break;
+            case R.id.print_Files:
+                String[] files = fileList();
+                for(String f : files) {
+                    try {
+                        FileInputStream fileStream = mContext.openFileInput(f);
+                        int size = fileStream.available();
+                        byte[] content = new byte[size];
+                        fileStream.read(content);
+                        fileStream.close();
+                        System.out.println(f + " " + size + " bytes");
+                        System.out.println(new String(content));
+                    }
+                    catch(Exception ex) {
+                    }
+                }
+                break;
             case R.id.delete_files:
                 mDialogDeleteFiles.show();
                 break;
@@ -617,7 +633,13 @@ public class MenuScreen extends AppCompatActivity implements NavigationView.OnNa
                     break;
                 case MOTION_SUMMARY:
                     System.out.println("updateGraphVisibility() for MOTION_SUMMARY");
-                    mExercise.DisplaySummary(mContext, mSummaryList);
+                    //mExercise.DisplaySummary(mContext, mSummaryList);
+                    try{
+                        mExercise.PlotAngles(mLineChart);
+                    }
+                    catch( JSONException ex){
+                        System.out.println("Couldn't print angles");
+                    }
                     break;
             }
         }

@@ -28,12 +28,19 @@ public interface Constants {
 
     final String
             BICEP_CURL = "Bicep Curl",
+            HAMMER_CURL = "Hammer Curl",
+            REVERSE_CURL = "Reverse Bicep Curl",
             SIDE_RAISE = "Side Raise",
             FRONT_RAISE = "Front Raise",
             SQUAT = "Back Squat",
-            POWER_CLEAN = "Power Clean";
+            POWER_CLEAN = "Power Clean",
+            OVERHEAD_PRESS = "Overhead Press",
+            DEADLIFT = "Deadlift",
+            TRICEP_EXTENSION = "Overhead Tricep Extension",
+            CLEAN = "Clean",
+            CLEAN_JERK = "Clean and Jerk";
 
-    String[] ExerciseList = {BICEP_CURL, SIDE_RAISE, FRONT_RAISE, SQUAT, POWER_CLEAN};
+    String[] ExerciseList = {BICEP_CURL, HAMMER_CURL, REVERSE_CURL, SIDE_RAISE, FRONT_RAISE, SQUAT, OVERHEAD_PRESS, DEADLIFT, TRICEP_EXTENSION, POWER_CLEAN, CLEAN, CLEAN_JERK};
 
     //JSON TAG STRINGS
     String  /*Workout String*/

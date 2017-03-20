@@ -188,6 +188,75 @@ public class Exercise implements Constants{
         mRotZ.put(val);
     }
 
+    public void PlotAngles(LineChart chart) throws JSONException{
+        ArrayList<ILineDataSet> lines = new ArrayList<> ();
+        ArrayList<Entry> X_angle = new ArrayList<>();
+        ArrayList<Entry> Y_angle = new ArrayList<>();
+        ArrayList<Entry> Z_angle = new ArrayList<>();
+
+        for(int i = 0; i < mDistX.length(); i++){
+            double x = mDistX.getDouble(i);
+            double y = mDistY.getDouble(i);
+            double z = mDistZ.getDouble(i);
+            double XAngle = getAngle(y, x, z);
+            double YAngle = getAngle(x, y, z);
+            double ZAngle = getAngle(z, x, y);
+            X_angle.add(new Entry(i, (float) XAngle));
+            Y_angle.add(new Entry(i, (float) YAngle));
+            Z_angle.add(new Entry(i, (float) ZAngle));
+        }
+
+        if(!X_angle.isEmpty()) lines = MultipleLines(lines, X_angle, "X Angle", C_RX, YAxis.AxisDependency.LEFT);
+        if(!Y_angle.isEmpty()) lines = MultipleLines(lines, Y_angle, "Y Angle", C_RY, YAxis.AxisDependency.LEFT);
+        if(!Z_angle.isEmpty()) lines = MultipleLines(lines, Z_angle, "Z Angle", C_RZ, YAxis.AxisDependency.LEFT);
+
+        Legend legend = chart.getLegend();
+        legend.setEnabled(true);
+        legend.setTextColor(Color.WHITE);
+        legend.setWordWrapEnabled(true);
+
+        chart.setVisibility(View.VISIBLE);
+        chart.setPinchZoom(true);
+        chart.setDoubleTapToZoomEnabled(true);
+        chart.setDragEnabled(true);
+
+        XAxis x = chart.getXAxis();
+        x.setEnabled(true);
+        x.setDrawAxisLine(true);
+        x.setDrawLabels(true);
+        x.setTextColor(Color.WHITE);
+        x.setAxisMaximum(X_angle.size());
+        x.setPosition(XAxis.XAxisPosition.BOTTOM);
+        x.setValueFormatter(new TimeFormatter(10));
+
+        chart.getAxisRight().setEnabled(false);
+        YAxis yRot = chart.getAxisLeft();
+        yRot.setEnabled(true);
+        yRot.removeAllLimitLines();
+        yRot.setDrawLimitLinesBehindData(true);
+        yRot.setAxisMinimum(-180.0f);
+        yRot.setAxisMaximum(180.0f);
+        yRot.setValueFormatter(new DegreesFormater());
+        yRot.setLabelCount(9, true);
+        yRot.setDrawLabels(true);
+        yRot.setTextColor(Color.WHITE);
+        yRot.setGranularity(1);
+
+        System.out.println("Chart setData()");
+
+        if(!lines.isEmpty()) {
+            chart.setData(new LineData(lines));
+            chart.setDragEnabled(true);
+        }
+        else chart.clear();
+        chart.invalidate();
+        System.out.println("End plotAll()");
+    }
+
+    private double getAngle(double arg1, double arg2, double arg3){
+        return 180 * Math.atan2(arg1, Math.sqrt(arg2*arg2+arg3*arg3) ) / Math.PI;
+    }
+
     public void SetStartTime(Date date){
         mStartTime = C_DATE_FORMAT.format(date);
     }
@@ -224,7 +293,6 @@ public class Exercise implements Constants{
         chart.setPinchZoom(true);
         chart.setDoubleTapToZoomEnabled(true);
         chart.setDragEnabled(true);
-        //chart.setScaleEnabled(false);
 
         XAxis x = chart.getXAxis();
         x.setEnabled(true);
@@ -259,12 +327,6 @@ public class Exercise implements Constants{
         yRot.setTextColor(Color.WHITE);
         yRot.setGranularity(1);
 
-        /*
-        LimitLine[] lLine = getLimitLine(90.0f,0.0f,80.0f,"Shoulder Raise");
-        yRot.addLimitLine(lLine[0]);
-        yRot.addLimitLine(lLine[1]);
-        yRot.addLimitLine(lLine[2]);
-        */
         System.out.println("Chart setData()");
 
         if(!lines.isEmpty()) {
