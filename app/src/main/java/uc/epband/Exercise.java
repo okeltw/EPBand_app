@@ -301,7 +301,7 @@ public class Exercise implements Constants{
         x.setTextColor(Color.WHITE);
         x.setAxisMaximum(dX.size());
         x.setPosition(XAxis.XAxisPosition.BOTTOM);
-        x.setValueFormatter(new TimeFormatter(10));
+        x.setValueFormatter(new TimeFormatter(100));
 
 
         YAxis yDist = chart.getAxisLeft();
