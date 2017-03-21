@@ -7,6 +7,9 @@ package uc.epband;
  */
 
 public class Calculus {
+    /**
+     * Mode of integration, used in integration calculations
+     */
     enum INT_MODE{
         LEFT,
         RIGHT,
@@ -70,5 +73,42 @@ public class Calculus {
         }
 
         return retArray;
+    }
+
+    /**
+     * Interpolates a midpoint using a linear algorithm.
+     * @param a Cartesian point to interpolate, form [x_val, y_val]
+     * @param b Cartesian point to interpolate, form [x_val, y_val]
+     * @return The result of interpolation
+     * @throws IllegalArgumentException
+     */
+    public static double[] linearInterpolate(double[] a, double[] b) throws IllegalArgumentException{
+        if(a.length != 2 || b.length != 2){
+            throw new IllegalArgumentException("Parameters must be of size two.");
+        }
+
+        double[] result = new double[2];
+        result[0] = a[0] + (b[0] - a[0])/2;
+        result[1] = a[1] + (b[1] - a[1])/2;
+        return result;
+    }
+
+    /**
+     * Interpolates the next point using a linear algorithm
+     * based on two provided cartesian points. Direction is pointed from a -> b.
+     * @param a Cartesian point to interpolate, form [x_val, y_val]
+     * @param b Cartesian point to interpolate, form [x_val, y_val]
+     * @return The result of interpolation
+     * @throws IllegalArgumentException
+     */
+    public static double[] linearInterpolateNext(double[] a, double[] b) throws IllegalArgumentException{
+        if(a.length != 2 || b.length != 2){
+            throw new IllegalArgumentException("Parameters must be of size two.");
+        }
+
+        double[] result = new double[2];
+        result[0] = b[0] + (b[0]-a[0]);
+        result[1] = b[1] + (b[1] - a[1]);
+        return result;
     }
 }
