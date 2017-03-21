@@ -33,7 +33,11 @@ public class HeartRate implements Constants{
     private double mUnread, mRest, mAerobic, mAnaerobic;
     private String mSampleStep;
     private JSONArray mRawBPM;
-    private int mMHR;
+    private int mMHR, mLHR;
+    private double mHRThresh; // Threshold of acceptable change off of interpolated value (%)
+
+    // Used if
+    private static int default_HR = 75;
 
     public HeartRate(){
         mRawBPM = new JSONArray();
@@ -43,6 +47,8 @@ public class HeartRate implements Constants{
         mAerobic = 0;
         mAnaerobic = 0;
         mMHR = 220;
+        mLHR = 60;
+        mHRThresh = 0.1; // E.g. an expected value of 100 can include anything from 90 to 110
     }
 
     public HeartRate(String jString) throws JSONException{
@@ -100,19 +106,50 @@ public class HeartRate implements Constants{
         }
     }
 
+    public boolean HeartrateIsValid(double BPM){
+        if (mRawBPM.length() < 2)
+            return false;
+
+        try {
+            double left = mRawBPM.getDouble(mRawBPM.length() - 2),
+                    right = mRawBPM.getDouble(mRawBPM.length() - 1);
+            double interpResult = Calculus.linearInterpolateNextValue(left, right);
+            return (BPM < mMHR) &&
+                    (BPM > mLHR) &&
+                    (BPM > interpResult - (interpResult*mHRThresh)) &&
+                    (BPM < interpResult + (interpResult*mHRThresh));
+        } catch (JSONException jEx){
+            System.out.println("JSON exception whiule getting BPM data. Returning false.");
+            return false;
+        }
+    }
+
     public void AddData(int BPM){
-        mRawBPM.put(BPM);
+        if(HeartrateIsValid(BPM)) {
+            mRawBPM.put(BPM);
+        }
+        else{
+            System.out.println("BPM " + BPM + " was detected as invalid. Discarding.");
+            try {
+                // Try to use the previous data point
+                int prev = mRawBPM.getInt(mRawBPM.length()-1);
+                mRawBPM.put(prev);
+            } catch (JSONException jEx){
+                System.out.println("Could not use the previous data point. Using default value.");
+                mRawBPM.put(default_HR);
+            }
+        }
     }
 
     public void AddData(int[] BPM){
         for(int i = 0; i < BPM.length; i++){
-            mRawBPM.put(BPM[i]);
+            AddData(BPM[i]);
         }
     }
 
     public void AddData(JSONArray BPM) throws JSONException{
         for(int i = 0; i < BPM.length(); i++){
-            mRawBPM.put(BPM.getInt(i));
+            AddData(BPM.getInt(i));
         }
     }
 

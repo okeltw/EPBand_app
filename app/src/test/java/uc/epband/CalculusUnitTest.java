@@ -22,20 +22,20 @@ public class CalculusUnitTest {
         double val3 = Calculus.integrate(2, 2, 1, Calculus.INT_MODE.MID);   // 2
         double val4 = Calculus.integrate(2, 2, 1, Calculus.INT_MODE.TRAP);  // 2
 
-        assertEquals(val1, 2, delta);
-        assertEquals(val2, 2, delta);
-        assertEquals(val3, 2, delta);
-        assertEquals(val4, 2, delta);
+        assertEquals(2, val1, delta);
+        assertEquals(2, val2, delta);
+        assertEquals(2, val3, delta);
+        assertEquals(2, val4, delta);
 
         double val5 = Calculus.integrate(1, 5, 1, Calculus.INT_MODE.LEFT);  // 1
         double val6 = Calculus.integrate(1, 5, 1, Calculus.INT_MODE.RIGHT); // 5
         double val7 = Calculus.integrate(1, 5, 1, Calculus.INT_MODE.MID);   // 3
         double val8 = Calculus.integrate(1, 5, 1, Calculus.INT_MODE.TRAP);  // 3
 
-        assertEquals(val5, 1, delta);
-        assertEquals(val6, 5, delta);
-        assertEquals(val7, 3, delta);
-        assertEquals(val8, 3, delta);
+        assertEquals(1, val5, delta);
+        assertEquals(5, val6, delta);
+        assertEquals(3, val7, delta);
+        assertEquals(3, val8, delta);
     }
 
     @Test(expected = IllegalArgumentException.class)
@@ -58,10 +58,10 @@ public class CalculusUnitTest {
         double val4 = Calculus.integrateRange(range, width, Calculus.INT_MODE.TRAP);
         // 0.5 + 1.5 + 2.5 + 3.5 + 4.5 = 12.5
 
-        assertEquals(val1, 10, delta);
-        assertEquals(val2, 15, delta);
-        assertEquals(val3, 12.5, delta);
-        assertEquals(val4, 12.5, delta);
+        assertEquals(10, val1, delta);
+        assertEquals(15, val2, delta);
+        assertEquals(12.5, val3, delta);
+        assertEquals(12.5, val4, delta);
     }
 
     @Test(expected = IllegalArgumentException.class)
@@ -87,9 +87,65 @@ public class CalculusUnitTest {
         double[] val4 = Calculus.integrateRangeArray(range, width, Calculus.INT_MODE.TRAP);
         double[] expect4 = {0.5,1.5,2.5,3.5,4.5};
 
-        assertArrayEquals(val1, expect1, delta);
-        assertArrayEquals(val2, expect2, delta);
-        assertArrayEquals(val3, expect3, delta);
-        assertArrayEquals(val4, expect4, delta);
+        assertArrayEquals(expect1, val1, delta);
+        assertArrayEquals(expect2, val2, delta);
+        assertArrayEquals(expect3, val3, delta);
+        assertArrayEquals(expect4, val4, delta);
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void linearInterpolatePoint_ExceptionThrown() {
+        double[] emptyA = {},
+                 emptyB = {};
+        Calculus.linearInterpolatePoint(emptyA, emptyB);
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void linearInterpolateNextPoint_ExceptionThrown() {
+        double[] emptyA = {},
+                emptyB = {};
+        Calculus.linearInterpolateNextPoint(emptyA, emptyB);
+    }
+
+    @Test
+    public void linearInterpolatePoint_isCorrect(){
+        double[] a = {0,0},
+                 b = {2,2}; //result = 1,1
+
+        double[] val = Calculus.linearInterpolatePoint(a, b);
+        double[] expected = {1,1};
+
+        assertEquals(val.length, 2);
+        assertArrayEquals(expected, val, delta );
+    }
+
+    @Test
+    public void linearInterpolateNextPoint_isCorrect(){
+        double[] a = {0,0},
+                 b = {2,2}; //result = 4,4
+
+        double[] val = Calculus.linearInterpolateNextPoint(a, b);
+        double[] expected = {4,4};
+
+        assertEquals(val.length, 2);
+        assertArrayEquals(expected, val, delta );
+    }
+
+    @Test
+    public void linearInterpolateValue_isCorrect(){
+        double a = 0,
+                b = 2,
+                expected = 1,
+                val = Calculus.linearInterpolateValue(a,b);
+        assertEquals(expected, val, delta);
+    }
+
+    @Test
+    public void linearInterpolateNextValue_isCorrect(){
+        double a = 0,
+                b = 2,
+                expected = 4,
+                val = Calculus.linearInterpolateNextValue(a,b);
+        assertEquals(expected,val,delta);
     }
 }
