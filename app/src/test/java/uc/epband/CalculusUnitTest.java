@@ -94,25 +94,25 @@ public class CalculusUnitTest {
     }
 
     @Test(expected = IllegalArgumentException.class)
-    public void linearInterpolate_ExceptionThrown() {
+    public void linearInterpolatePoint_ExceptionThrown() {
         double[] emptyA = {},
                  emptyB = {};
-        Calculus.linearInterpolate(emptyA, emptyB);
+        Calculus.linearInterpolatePoint(emptyA, emptyB);
     }
 
     @Test(expected = IllegalArgumentException.class)
-    public void linearInterpolateNext_ExceptionThrown() {
+    public void linearInterpolateNextPoint_ExceptionThrown() {
         double[] emptyA = {},
                 emptyB = {};
-        Calculus.linearInterpolateNext(emptyA, emptyB);
+        Calculus.linearInterpolateNextPoint(emptyA, emptyB);
     }
 
     @Test
-    public void linearInterpolate_isCorrect(){
+    public void linearInterpolatePoint_isCorrect(){
         double[] a = {0,0},
                  b = {2,2}; //result = 1,1
 
-        double[] val = Calculus.linearInterpolate(a, b);
+        double[] val = Calculus.linearInterpolatePoint(a, b);
         double[] expected = {1,1};
 
         assertEquals(val.length, 2);
@@ -120,14 +120,32 @@ public class CalculusUnitTest {
     }
 
     @Test
-    public void linearInterpolateNext_isCorrect(){
+    public void linearInterpolateNextPoint_isCorrect(){
         double[] a = {0,0},
                  b = {2,2}; //result = 4,4
 
-        double[] val = Calculus.linearInterpolateNext(a, b);
+        double[] val = Calculus.linearInterpolateNextPoint(a, b);
         double[] expected = {4,4};
 
         assertEquals(val.length, 2);
         assertArrayEquals(expected, val, delta );
+    }
+
+    @Test
+    public void linearInterpolateValue_isCorrect(){
+        double a = 0,
+                b = 2,
+                expected = 1,
+                val = Calculus.linearInterpolateValue(a,b);
+        assertEquals(expected, val, delta);
+    }
+
+    @Test
+    public void linearInterpolateNextValue_isCorrect(){
+        double a = 0,
+                b = 2,
+                expected = 4,
+                val = Calculus.linearInterpolateNextValue(a,b);
+        assertEquals(expected,val,delta);
     }
 }
