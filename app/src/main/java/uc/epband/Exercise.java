@@ -1,6 +1,7 @@
 package uc.epband;
 
 import android.content.Context;
+import android.content.SharedPreferences;
 import android.graphics.Color;
 import android.util.Size;
 import android.view.View;
@@ -236,7 +237,7 @@ public class Exercise implements Constants{
         yRot.setDrawLimitLinesBehindData(true);
         yRot.setAxisMinimum(-180.0f);
         yRot.setAxisMaximum(180.0f);
-        yRot.setValueFormatter(new DegreesFormater());
+        yRot.setValueFormatter(new AngleFormatter());
         yRot.setLabelCount(9, true);
         yRot.setDrawLabels(true);
         yRot.setTextColor(Color.WHITE);
@@ -272,17 +273,26 @@ public class Exercise implements Constants{
         }
     }
 
-    public void PlotAll(LineChart chart) throws JSONException{
+    public void PlotAll(Context context, LineChart chart) throws JSONException{
         ArrayList<ILineDataSet> lines = new ArrayList<> ();
         ArrayList<Entry> dX = GetDataset(mDistX), dY = GetDataset(mDistY), dZ = GetDataset(mDistZ),
                         rX = GetDataset(mRotX), rY = GetDataset(mRotY), rZ = GetDataset(mRotZ);
 
-        if(!dX.isEmpty()) lines = MultipleLines(lines, dX, "X Distance", C_X, YAxis.AxisDependency.LEFT);
-        if(!dY.isEmpty()) lines = MultipleLines(lines, dY, "Y Distance", C_Y, YAxis.AxisDependency.LEFT);
-        if(!dZ.isEmpty()) lines = MultipleLines(lines, dZ, "Z Distance", C_Z, YAxis.AxisDependency.LEFT);
-        if(!rX.isEmpty()) lines = MultipleLines(lines, rX, "X Angle", C_RX, YAxis.AxisDependency.RIGHT);
-        if(!rY.isEmpty()) lines = MultipleLines(lines, rY, "Y Angle", C_RY, YAxis.AxisDependency.RIGHT);
-        if(!rZ.isEmpty()) lines = MultipleLines(lines, rZ, "Z Angle", C_RZ, YAxis.AxisDependency.RIGHT);
+        final SharedPreferences Settings = context.getSharedPreferences("SETTINGS", context.MODE_PRIVATE);
+        boolean[] mLineToggles = new boolean[6];
+        mLineToggles[0] = Settings.getBoolean("X", true);
+        mLineToggles[1] = Settings.getBoolean("Y", true);
+        mLineToggles[2] = Settings.getBoolean("Z", true);
+        mLineToggles[3] = Settings.getBoolean("RX", true);
+        mLineToggles[4] = Settings.getBoolean("RY", true);
+        mLineToggles[5] = Settings.getBoolean("RZ", true);
+
+        if((!dX.isEmpty()) && mLineToggles[0]) lines = MultipleLines(lines, dX, "X Linear", C_X, YAxis.AxisDependency.LEFT);
+        if((!dY.isEmpty()) && mLineToggles[1]) lines = MultipleLines(lines, dY, "Y Linear", C_Y, YAxis.AxisDependency.LEFT);
+        if((!dZ.isEmpty()) && mLineToggles[2]) lines = MultipleLines(lines, dZ, "Z Linear", C_Z, YAxis.AxisDependency.LEFT);
+        if((!rX.isEmpty()) && mLineToggles[3]) lines = MultipleLines(lines, rX, "X Gyro", C_RX, YAxis.AxisDependency.RIGHT);
+        if((!rY.isEmpty()) && mLineToggles[4]) lines = MultipleLines(lines, rY, "Y Gyro", C_RY, YAxis.AxisDependency.RIGHT);
+        if((!rZ.isEmpty()) && mLineToggles[5]) lines = MultipleLines(lines, rZ, "Z Gyro", C_RZ, YAxis.AxisDependency.RIGHT);
 
         Legend legend = chart.getLegend();
         legend.setEnabled(true);

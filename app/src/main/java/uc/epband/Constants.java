@@ -9,8 +9,11 @@ import com.github.mikephil.charting.formatter.IAxisValueFormatter;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.text.DateFormat;
+import java.text.DecimalFormat;
+import java.text.DecimalFormatSymbols;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.Locale;
 
 public interface Constants {
     String  DefaultPreferenceFile = "test";
@@ -105,6 +108,22 @@ public interface Constants {
         AXIS_Z
     }
 
+    DecimalFormat DecForm = new DecimalFormat("#.##", DecimalFormatSymbols.getInstance( Locale.ENGLISH ));
+
+    class AngleFormatter implements IAxisValueFormatter {
+
+        private String units = "\u00B0";
+
+        public AngleFormatter() {
+        }
+
+        @Override
+        public String getFormattedValue(float value, AxisBase axis) {
+            // "value" represents the position of the label on the axis (x or y)
+            return DecForm.format(value) + units;
+        }
+    }
+
     class DegreesFormater implements IAxisValueFormatter {
 
         private String units = "\u00B0/s";
@@ -115,7 +134,7 @@ public interface Constants {
         @Override
         public String getFormattedValue(float value, AxisBase axis) {
             // "value" represents the position of the label on the axis (x or y)
-            return value + units;
+            return DecForm.format(value) + units;
         }
     }
 
@@ -136,7 +155,6 @@ public interface Constants {
     }
 
     class DistanceFormatter implements IAxisValueFormatter {
-
         private String units = " g";
 
         public DistanceFormatter() { }
@@ -144,7 +162,8 @@ public interface Constants {
         @Override
         public String getFormattedValue(float value, AxisBase axis) {
             // "value" represents the position of the label on the axis (x or y)
-            return value + units;
+
+            return DecForm.format(value) + units;
         }
     }
 
