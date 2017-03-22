@@ -14,6 +14,7 @@ import android.os.Handler;
 import android.os.Message;
 import android.support.design.widget.Snackbar;
 import android.support.v4.app.ActivityCompat;
+import android.view.LayoutInflater;
 import android.view.View;
 import android.support.design.widget.NavigationView;
 import android.support.v4.view.GravityCompat;
@@ -23,7 +24,9 @@ import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.view.ViewParent;
 import android.widget.ListView;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import com.github.mikephil.charting.charts.LineChart;
@@ -65,7 +68,7 @@ public class MenuScreen extends AppCompatActivity implements NavigationView.OnNa
 
     private Context mContext;
     private AlertDialog.Builder mDialogConnect, mDialogDisconnect, mDialogCreateWorkout, mDialogEndWorkout,
-            mDialogEndExercise, mDialogNextExercise, mDialogDeleteFiles, mDialogToggleLines;
+            mDialogEndExercise, mDialogNextExercise, mDialogDeleteFiles, mDialogToggleLines, mDialogDisplayAnalysis;
 
     //RETURN CODES
     private final int SELECT_WORKOUT = 1, SELECT_EXERCISE = 2, REVIEW_EXERCISE = 3;
@@ -253,7 +256,10 @@ public class MenuScreen extends AppCompatActivity implements NavigationView.OnNa
             System.out.println("builder.create()");
             mDialogConnect.show();
         }
-        else System.out.println("BTservice can't connect");
+        else{
+            System.out.println("BTservice can't connect");
+            Toast.makeText(mContext,"Unable to locate EP Band",Toast.LENGTH_LONG).show();
+        }
     }
 
     private void endBluetooth() {
@@ -278,16 +284,19 @@ public class MenuScreen extends AppCompatActivity implements NavigationView.OnNa
         MenuItem graphToggle = menu.findItem(R.id.graph_toggle);
         MenuItem exerciseStart = menu.findItem(R.id.exercise_on);
         MenuItem exerciseStop = menu.findItem(R.id.exercise_off);
+        MenuItem displayAnalysis = menu.findItem(R.id.display_analysis);
         switch(mWorkoutInProgress){
             case REVIEW:
                 timeToggle.setEnabled(true).setVisible(true);
                 graphToggle.setEnabled(true).setVisible(true);
                 exerciseStart.setEnabled(false).setVisible(false);
                 exerciseStop.setEnabled(false).setVisible(false);
+                displayAnalysis.setEnabled(true).setVisible(true);
                 break;
             case WORKOUT:
                 timeToggle.setEnabled(false).setVisible(false);
                 graphToggle.setEnabled(false).setVisible(false);
+                displayAnalysis.setEnabled(false).setVisible(false);
                 if(mExerciseInProgress) {
                     exerciseStart.setEnabled(false).setVisible(false);
                     exerciseStop.setEnabled(true).setVisible(true);
@@ -299,6 +308,7 @@ public class MenuScreen extends AppCompatActivity implements NavigationView.OnNa
                 break;
             case NONE:
             default:
+                displayAnalysis.setEnabled(false).setVisible(false);
                 timeToggle.setEnabled(false).setVisible(false);
                 graphToggle.setEnabled(false).setVisible(false);
                 exerciseStart.setEnabled(false).setVisible(false);
@@ -350,6 +360,14 @@ public class MenuScreen extends AppCompatActivity implements NavigationView.OnNa
             case R.id.line_toggles:
                 mDialogToggleLines.show();
                 break;
+            case R.id.display_analysis:
+                if (mExercise != null) {
+                    mExercise.DisplaySummary(mContext, mSummaryList);
+                }
+                else{
+                    System.out.println("No exercise to display summary");
+                }
+                break;
         }
         return super.onOptionsItemSelected(item);
     }
@@ -372,6 +390,17 @@ public class MenuScreen extends AppCompatActivity implements NavigationView.OnNa
                 break;
             case R.id.nav_edit_workout:
                 System.out.println("Menu: Workout Templates");
+                if(mExercise != null){
+                    try {
+                        Bundle bundle = mExercise.PrintAnalysis(mLineChart);
+                        System.out.println(bundle.getString("Exercise"));
+                        updateDisplayAnalysisDialog(bundle);
+                        mDialogDisplayAnalysis.show();
+                    }catch(JSONException ex){
+                        System.out.println("Fuck");
+                    }
+                }
+                mDialogDisplayAnalysis.show();
                 break;
             case R.id.nav_profile:
                 System.out.println("Menu: Profile");
@@ -770,6 +799,7 @@ public class MenuScreen extends AppCompatActivity implements NavigationView.OnNa
         createDialogEndExercise();
         createDialogDeleteFiles();
         createDialogToggleLines();
+        createDialogDisplayAnalysis();
     }
 
     public void createDialogConnect(){
@@ -931,6 +961,45 @@ public class MenuScreen extends AppCompatActivity implements NavigationView.OnNa
                 System.out.println("cancel");
             }
         });
+    }
+
+    public void createDialogDisplayAnalysis(){
+        mDialogDisplayAnalysis = new AlertDialog.Builder(this);
+        mDialogDisplayAnalysis.setView(getLayoutInflater().inflate(R.layout.test, null));
+
+        mDialogDisplayAnalysis.setMessage("Erase all saved workouts?")
+                .setTitle("Erase Files")
+                .setIcon(R.drawable.ic_dumbell);
+
+        mDialogDisplayAnalysis.setPositiveButton("Close", new DialogInterface.OnClickListener() {
+            public void onClick(DialogInterface dialog, int id) {
+                System.out.println("Close analysis");
+            }
+        });
+    }
+
+    public void updateDisplayAnalysisDialog(Bundle bundle){
+        //ViewParent parent = findViewById(R.layout.test).getParent();
+
+        TextView ExerciseText =  (TextView) findViewById(R.id.textExercise);
+        //ExerciseText.setText(bundle.getString("Exercise", ""));
+        ExerciseText.setText("TEST EXERCISE");
+
+        TextView ROMText =  (TextView) findViewById(R.id.textAvgROM);
+        Double repsROM = bundle.getDouble("ROM",0.0);
+        //ROMText.setText( repsROM.toString() );
+        ROMText.setText("1");
+
+        TextView RepsText =  (TextView) findViewById(R.id.textReps);
+        Integer repsVal = bundle.getInt("Reps",0);
+        //RepsText.setText(repsVal.toString());
+        RepsText.setText("50");
+
+        TextView ConsitencyText =  (TextView) findViewById(R.id.textConsistency);
+        Double consistencyVal = bundle.getDouble("StdDev",0.0);
+        //ConsitencyText.setText( consistencyVal.toString() );
+        ConsitencyText.setText("100");
+        createDialogDisplayAnalysis();
     }
 
     public void createDialogToggleLines(){

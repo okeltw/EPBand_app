@@ -3,6 +3,7 @@ package uc.epband;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.graphics.Color;
+import android.os.Bundle;
 import android.util.Size;
 import android.view.View;
 import android.widget.ArrayAdapter;
@@ -33,7 +34,8 @@ import java.util.Vector;
 public class Exercise implements Constants{
     private boolean mValid, mAnalyzed;
     public String mExercise, mStartTime, mTimeLength, mSampleStep;
-    private double mGoalROM, mAverageROM;
+    private double mGoalROM;
+    private Double mAverageROM, stdDev;
     private int mReps;
     private JSONArray mRotX, mRotY, mRotZ, mDistX, mDistY, mDistZ;
     private int dataLen;
@@ -389,6 +391,9 @@ public class Exercise implements Constants{
         adapter.add("Start Time: " + mStartTime);
         adapter.add("Total Time: " + mTimeLength);
         adapter.add("Sampled at: " + mSampleStep);
+        adapter.add("Reps: " + mReps);
+        adapter.add("Average ROM: " + mAverageROM);
+        adapter.add("Consistency: " + stdDev);
 
         summaryList.setAdapter(adapter);
         summaryList.setVisibility(View.VISIBLE);
@@ -512,8 +517,9 @@ public class Exercise implements Constants{
         return reps;
     }
 
-    public void PrintAnalysis(LineChart chart) throws JSONException{
+    public Bundle PrintAnalysis(LineChart chart) throws JSONException{
         int size = mDistX.length();
+        Bundle bundle = new Bundle();
         System.out.println("Data size: " + size);
         if(size > 0) {
             mXAngle = new double[size];
@@ -535,7 +541,7 @@ public class Exercise implements Constants{
                     chart.getAxisLeft().addLimitLine(limits[0]);
                     chart.getAxisLeft().addLimitLine(limits[1]);
                     chart.getAxisLeft().addLimitLine(limits[2]);
-                    SingleAngleAnalysis(mXAngle, 70.0, -70.0, false);
+                    bundle = SingleAngleAnalysis(mXAngle, 70.0, -70.0, false);
                     break;
                 case SIDE_RAISE:
                 case FRONT_RAISE:
@@ -543,36 +549,40 @@ public class Exercise implements Constants{
                     chart.getAxisLeft().addLimitLine(limits[0]);
                     chart.getAxisLeft().addLimitLine(limits[1]);
                     chart.getAxisLeft().addLimitLine(limits[2]);
-                    SingleAngleAnalysis(mXAngle, 90.0, 0.0, false);
+                    bundle = SingleAngleAnalysis(mXAngle, 90.0, 0.0, false);
                     break;
                 case REVERSE_CURL:
                     limits = getLimitLine(chart, 70.0f, (float)mGoalROM, "End Position", Color.RED);
                     chart.getAxisLeft().addLimitLine(limits[0]);
                     chart.getAxisLeft().addLimitLine(limits[1]);
                     chart.getAxisLeft().addLimitLine(limits[2]);
-                    SingleAngleAnalysis(mXAngle, 70.0, -70.0, false);
+                    bundle = SingleAngleAnalysis(mXAngle, 70.0, -70.0, false);
                     break;
                 case HAMMER_CURL:
                     limits = getLimitLine(chart, 70.0f, (float)mGoalROM, "End Position", Color.RED);
                     chart.getAxisLeft().addLimitLine(limits[0]);
                     chart.getAxisLeft().addLimitLine(limits[1]);
                     chart.getAxisLeft().addLimitLine(limits[2]);
-                    SingleAngleAnalysis(mXAngle, 70.0, -70.0, false);
+                    bundle = SingleAngleAnalysis(mXAngle, 70.0, -70.0, false);
                     break;
                 default:
                     System.out.println("Not a valid exercise");
+                    bundle = new Bundle();
                     break;
             }
         }
         else System.out.println("No data to analyze");
+
+        return bundle;
     }
 
-    private void SingleAngleAnalysis(double[] data, double upGoal, double downGoal, boolean startUpstroke){
+    public Bundle SingleAngleAnalysis(double[] data, double upGoal, double downGoal, boolean startUpstroke){
         double fullRange = upGoal - downGoal;
         double median = (upGoal + downGoal)/2;
         double TopPosition = median + mGoalROM * fullRange/2;
         double BottomPosition = median - mGoalROM * fullRange/2;
         boolean upstroke = startUpstroke;
+        stdDev = 0.0;
 
         double FinalPosition = data[0];
         ArrayList<Double> RepMaxs = new ArrayList();
@@ -603,17 +613,24 @@ public class Exercise implements Constants{
             else if(!upstroke && data[i] >= FinalPosition) FinalPosition = data[i];
         }
 
+        Bundle bundle = new Bundle();
         mAverageROM = 0.0;
         if(RepMaxs.size() > 0) {
             for(int i = 0; i < RepMaxs.size(); i++) mAverageROM += RepMaxs.get(i);
 
             mAverageROM /= RepMaxs.size();
-            if (startUpstroke) {
-                mAverageROM /= upGoal;
-            } else {
-                mAverageROM /= downGoal;
+            double goal = (startUpstroke) ? upGoal : downGoal;
+            mAverageROM /= goal;
+
+            for(int i = 0; i < RepMaxs.size(); i++){
+                stdDev += Math.pow(RepMaxs.get(i) - goal,2);
             }
-            ;
+            stdDev = Math.sqrt(stdDev/RepMaxs.size())/goal;
+
+            bundle.putDouble("ROM", mAverageROM);
+            bundle.putString("Exercise", mExercise);
+            bundle.putInt("Reps", mReps);
+            bundle.putDouble("StdDev", stdDev);
         }
 
         System.out.println("Fullrange = " + fullRange);
@@ -623,7 +640,10 @@ public class Exercise implements Constants{
         System.out.println("Bottom position = " + BottomPosition);
         System.out.println("Reps = " + mReps);
         System.out.println("Average ROM = " + mAverageROM);
-        System.out.println("Each rep = " + RepMaxs.toArray());
+        System.out.println("Standard Deviation = " + stdDev);
+
+        return bundle;
+        //System.out.println("Each rep = " + RepMaxs.toArray());
 
     }
 }

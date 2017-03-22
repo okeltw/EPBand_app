@@ -39,6 +39,14 @@
         android:visible="true" />
 
     <item
+        android:id="@+id/display_analysis"
+        android:orderInCategory="4"
+        android:title="Display Analysis"
+        app:showAsAction="always"
+        android:icon="@drawable/ic_menu_gallery"
+        android:visible="false"/>
+
+    <item
         android:id="@+id/graph_toggle"
         android:orderInCategory="2"
         android:title="Toggle Graph"
