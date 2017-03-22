@@ -31,12 +31,14 @@ import java.util.List;
 import java.util.Vector;
 
 public class Exercise implements Constants{
-    private Boolean mValid, mAnalyzed;
+    private boolean mValid, mAnalyzed;
     public String mExercise, mStartTime, mTimeLength, mSampleStep;
-    private Double mGoalROM, mAverageROM;
+    private double mGoalROM, mAverageROM;
     private int mReps;
     private JSONArray mRotX, mRotY, mRotZ, mDistX, mDistY, mDistZ;
     private int dataLen;
+
+    double[] mXAngle, mYAngle, mZAngle;
 
 
     public Exercise(){
@@ -53,7 +55,7 @@ public class Exercise implements Constants{
         mDistY = new JSONArray();
         mDistZ = new JSONArray();
         mReps = 0;
-        mGoalROM = 0.8;
+        mGoalROM = 0.0;
         mAverageROM = 0.0;
 
         SetStartTime(new Date());
@@ -195,7 +197,16 @@ public class Exercise implements Constants{
         ArrayList<Entry> Y_angle = new ArrayList<>();
         ArrayList<Entry> Z_angle = new ArrayList<>();
 
+        /*
+        System.out.println("Start: Get all angles");
+        mXAngle = getAllAngles(mDistY, mDistX, mDistZ);
+        mYAngle = getAllAngles(mDistX, mDistY, mDistZ);
+        mZAngle = getAllAngles(mDistZ, mDistX, mDistY);
+        System.out.println("Stop: Got all angles");
+        */
+
         for(int i = 0; i < mDistX.length(); i++){
+
             double x = mDistX.getDouble(i);
             double y = mDistY.getDouble(i);
             double z = mDistZ.getDouble(i);
@@ -205,6 +216,12 @@ public class Exercise implements Constants{
             X_angle.add(new Entry(i, (float) XAngle));
             Y_angle.add(new Entry(i, (float) YAngle));
             Z_angle.add(new Entry(i, (float) ZAngle));
+
+            /*
+            X_angle.add(new Entry(i, (float) mXAngle[i]));
+            Y_angle.add(new Entry(i, (float) mYAngle[i]));
+            Z_angle.add(new Entry(i, (float) mZAngle[i]));
+            */
         }
 
         if(!X_angle.isEmpty()) lines = MultipleLines(lines, X_angle, "X Angle", C_RX, YAxis.AxisDependency.LEFT);
@@ -251,7 +268,21 @@ public class Exercise implements Constants{
         }
         else chart.clear();
         chart.invalidate();
-        System.out.println("End plotAll()");
+        System.out.println("End plotAngles()");
+        PrintAnalysis();
+    }
+
+    private double[] getAllAngles(JSONArray arg1, JSONArray arg2, JSONArray arg3) throws JSONException{
+        int size = arg1.length();
+        if(size > 0) {
+            double[] angles = new double[size];
+            for (int i = 0; i < size; i++) {
+                angles[i] = getAngle(arg1.getDouble(i), arg2.getDouble(i), arg3.getDouble(i));
+                System.out.println("Angles:\n" + angles.toString());
+                return angles;
+            }
+        }
+        return null;
     }
 
     private double getAngle(double arg1, double arg2, double arg3){
@@ -348,7 +379,6 @@ public class Exercise implements Constants{
         else chart.clear();
         chart.invalidate();
         System.out.println("End plotAll()");
-
     }
 
     public void DisplaySummary(Context context, ListView summaryList){
@@ -378,7 +408,7 @@ public class Exercise implements Constants{
 
         returnLines[2] = new LimitLine(goal*(2f-tolerancePercent));
         returnLines[2].setLineColor(Color.RED);
-        returnLines[2].enableDashedLine(12.0f, 12.0f,1.0f);
+        returnLines[2].enableDashedLine(12.0f, 12.0f, 1.0f);
         //returnLines[2].setLineWidth(1f);
 
         return returnLines;
@@ -477,5 +507,103 @@ public class Exercise implements Constants{
 
         // Return the count
         return reps;
+    }
+
+    public void PrintAnalysis() throws JSONException{
+        int size = mDistX.length();
+        System.out.println("Data size: " + size);
+        if(size > 0) {
+            mXAngle = new double[size];
+            mYAngle = new double[size];
+            mZAngle = new double[size];
+            for (int i = 0; i < size; i++) {
+                double x = mDistX.getDouble(i);
+                double y = mDistY.getDouble(i);
+                double z = mDistZ.getDouble(i);
+                mXAngle[i] = getAngle(y, x, z);
+                mYAngle[i] = getAngle(x, y, z);
+                mZAngle[i] = getAngle(z, x, y);
+            }
+
+            switch (mExercise) {
+                case BICEP_CURL:
+                    SingleAngleAnalysis(mXAngle, 70.0, -70.0, false);
+                    break;
+                case SIDE_RAISE:
+                case FRONT_RAISE:
+                    SingleAngleAnalysis(mXAngle, 90.0, 0.0, false);
+                    break;
+                case REVERSE_CURL:
+                    SingleAngleAnalysis(mXAngle, 70.0, -70.0, false);
+                    break;
+                case HAMMER_CURL:
+                    SingleAngleAnalysis(mXAngle, 70.0, -70.0, false);
+                    break;
+                default:
+                    System.out.println("Not a valid exercise");
+                    break;
+            }
+        }
+        else System.out.println("No data to analyze");
+    }
+
+    private void SingleAngleAnalysis(double[] data, double upGoal, double downGoal, boolean startUpstroke){
+        double fullRange = upGoal - downGoal;
+        double median = (upGoal + downGoal)/2;
+        double TopPosition = median + mGoalROM * fullRange/2;
+        double BottomPosition = median - mGoalROM * fullRange/2;
+        boolean upstroke = startUpstroke;
+
+        double FinalPosition = data[0];
+        ArrayList<Double> RepMaxs = new ArrayList();
+        mReps = 0;
+
+        for(int i = 0; i < data.length; i++){
+            if(upstroke && data[i] >= TopPosition){
+                if(startUpstroke){
+                    mReps++;
+                }
+                else{
+                    RepMaxs.add(FinalPosition);
+                    FinalPosition = data[i];
+                }
+                upstroke = false;
+            }else if(!upstroke && data[i] <= BottomPosition){
+                if(!startUpstroke){
+                    mReps++;
+                }
+                else{
+                    RepMaxs.add(FinalPosition);
+                    FinalPosition = data[i];
+                }
+                upstroke = true;
+            }
+
+            if(upstroke && data[i] <= FinalPosition) FinalPosition = data[i];
+            else if(!upstroke && data[i] >= FinalPosition) FinalPosition = data[i];
+        }
+
+        mAverageROM = 0.0;
+        if(RepMaxs.size() > 0) {
+            for(int i = 0; i < RepMaxs.size(); i++) mAverageROM += RepMaxs.get(i);
+
+            mAverageROM /= RepMaxs.size();
+            if (startUpstroke) {
+                mAverageROM /= upGoal;
+            } else {
+                mAverageROM /= downGoal;
+            }
+            ;
+        }
+
+        System.out.println("Fullrange = " + fullRange);
+        System.out.println("Median = " + median);
+        System.out.println("GOAL ROM = " + mGoalROM);
+        System.out.println("Top position = " + TopPosition);
+        System.out.println("Bottom position = " + BottomPosition);
+        System.out.println("Reps = " + mReps);
+        System.out.println("Average ROM = " + mAverageROM);
+        System.out.println("Each rep = " + RepMaxs.toArray());
+
     }
 }
