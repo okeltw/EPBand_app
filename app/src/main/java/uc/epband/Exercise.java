@@ -269,7 +269,7 @@ public class Exercise implements Constants{
         else chart.clear();
         chart.invalidate();
         System.out.println("End plotAngles()");
-        PrintAnalysis();
+        PrintAnalysis(chart);
     }
 
     private double[] getAllAngles(JSONArray arg1, JSONArray arg2, JSONArray arg3) throws JSONException{
@@ -308,6 +308,8 @@ public class Exercise implements Constants{
         ArrayList<ILineDataSet> lines = new ArrayList<> ();
         ArrayList<Entry> dX = GetDataset(mDistX), dY = GetDataset(mDistY), dZ = GetDataset(mDistZ),
                         rX = GetDataset(mRotX), rY = GetDataset(mRotY), rZ = GetDataset(mRotZ);
+
+        mGoalROM = (double) context.getSharedPreferences(DefaultPreferenceFile, context.MODE_PRIVATE).getInt("ROM",80)/100;
 
         final SharedPreferences Settings = context.getSharedPreferences("SETTINGS", context.MODE_PRIVATE);
         boolean[] mLineToggles = new boolean[6];
@@ -392,11 +394,11 @@ public class Exercise implements Constants{
         summaryList.setVisibility(View.VISIBLE);
     }
 
-    public LimitLine[] getLimitLine(float goal, float minimum, float tolerancePercent, String label){
+    public LimitLine[] getLimitLine(LineChart chart, float goal, float tolerancePercent, String label, int color){
         if(tolerancePercent > 1.0) tolerancePercent = tolerancePercent/100.0f;
         LimitLine[] returnLines = new LimitLine[3];
         returnLines[0] = new LimitLine(goal*tolerancePercent);
-        returnLines[0].setLineColor(Color.RED);
+        returnLines[0].setLineColor(color);
         returnLines[0].enableDashedLine(12.0f, 12.0f,1.0f);
         //returnLines[0].setLineWidth(1f);
 
@@ -407,9 +409,10 @@ public class Exercise implements Constants{
         returnLines[1].setTextSize(14f);
 
         returnLines[2] = new LimitLine(goal*(2f-tolerancePercent));
-        returnLines[2].setLineColor(Color.RED);
+        returnLines[2].setLineColor(color);
         returnLines[2].enableDashedLine(12.0f, 12.0f, 1.0f);
         //returnLines[2].setLineWidth(1f);
+
 
         return returnLines;
     }
@@ -509,7 +512,7 @@ public class Exercise implements Constants{
         return reps;
     }
 
-    public void PrintAnalysis() throws JSONException{
+    public void PrintAnalysis(LineChart chart) throws JSONException{
         int size = mDistX.length();
         System.out.println("Data size: " + size);
         if(size > 0) {
@@ -525,18 +528,35 @@ public class Exercise implements Constants{
                 mZAngle[i] = getAngle(z, x, y);
             }
 
+            LimitLine[] limits;
             switch (mExercise) {
                 case BICEP_CURL:
+                    limits = getLimitLine(chart, 70.0f, (float)mGoalROM, "End Position", Color.RED);
+                    chart.getAxisLeft().addLimitLine(limits[0]);
+                    chart.getAxisLeft().addLimitLine(limits[1]);
+                    chart.getAxisLeft().addLimitLine(limits[2]);
                     SingleAngleAnalysis(mXAngle, 70.0, -70.0, false);
                     break;
                 case SIDE_RAISE:
                 case FRONT_RAISE:
+                    limits = getLimitLine(chart, 90.0f, (float)mGoalROM, "End Position", Color.RED);
+                    chart.getAxisLeft().addLimitLine(limits[0]);
+                    chart.getAxisLeft().addLimitLine(limits[1]);
+                    chart.getAxisLeft().addLimitLine(limits[2]);
                     SingleAngleAnalysis(mXAngle, 90.0, 0.0, false);
                     break;
                 case REVERSE_CURL:
+                    limits = getLimitLine(chart, 70.0f, (float)mGoalROM, "End Position", Color.RED);
+                    chart.getAxisLeft().addLimitLine(limits[0]);
+                    chart.getAxisLeft().addLimitLine(limits[1]);
+                    chart.getAxisLeft().addLimitLine(limits[2]);
                     SingleAngleAnalysis(mXAngle, 70.0, -70.0, false);
                     break;
                 case HAMMER_CURL:
+                    limits = getLimitLine(chart, 70.0f, (float)mGoalROM, "End Position", Color.RED);
+                    chart.getAxisLeft().addLimitLine(limits[0]);
+                    chart.getAxisLeft().addLimitLine(limits[1]);
+                    chart.getAxisLeft().addLimitLine(limits[2]);
                     SingleAngleAnalysis(mXAngle, 70.0, -70.0, false);
                     break;
                 default:
