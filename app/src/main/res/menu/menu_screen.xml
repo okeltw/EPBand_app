@@ -17,6 +17,12 @@
         app:showAsAction="never" />
 
     <item
+        android:id="@+id/line_toggles"
+        android:orderInCategory="11"
+        android:title="Toggle Graph Lines"
+        app:showAsAction="never" />
+
+    <item
         android:id="@+id/bluetooth_status"
         android:orderInCategory="4"
         android:title="Bluetooth"

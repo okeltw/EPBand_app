@@ -33,6 +33,7 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
@@ -45,6 +46,8 @@ public class MenuScreen extends AppCompatActivity implements NavigationView.OnNa
     private HeartRate mHeartRate = null;
     private Motion mMotion = null;
     private Exercise mExercise = null;
+
+    private boolean[] mLineToggles;
 
     public enum workoutState{
         WORKOUT, REVIEW, NONE
@@ -62,7 +65,7 @@ public class MenuScreen extends AppCompatActivity implements NavigationView.OnNa
 
     private Context mContext;
     private AlertDialog.Builder mDialogConnect, mDialogDisconnect, mDialogCreateWorkout, mDialogEndWorkout,
-            mDialogEndExercise, mDialogNextExercise, mDialogDeleteFiles;
+            mDialogEndExercise, mDialogNextExercise, mDialogDeleteFiles, mDialogToggleLines;
 
     //RETURN CODES
     private final int SELECT_WORKOUT = 1, SELECT_EXERCISE = 2, REVIEW_EXERCISE = 3;
@@ -94,11 +97,27 @@ public class MenuScreen extends AppCompatActivity implements NavigationView.OnNa
                     System.out.println("MenuScreen: Read: " + readMessage);
                     try {
                         handleBluetoothData(readMessage);
-
+                        if(mWorkoutInProgress == workoutState.WORKOUT){
+                            switch(mGraphState){
+                                case HEARTRATE_REALTIME:
+                                    mWorkout.plotHeartRateRealTime(mLineChart);
+                                    break;
+                                case MOTION_REALTIME:
+                                    try{
+                                        mExercise.PlotAll(mContext, mLineChart);
+                                    }catch(JSONException ex){
+                                        System.out.println("Couldn't plot motion realtime");
+                                    }
+                                    break;
+                                default:
+                                    System.out.println("No valid graphs to plot realtime data");
+                                    mGraphState = graphState.HEARTRATE_REALTIME;
+                                    break;
+                            }
+                        }
                     }catch (JSONException ex){
                         System.out.println("Could not read message from EPBand, JSON Exception");
                     }
-                    //mConversationArrayAdapter.add(mConnectedDeviceName + ":  " + readMessage);
                     break;
                 case Constants.MESSAGE_DEVICE_NAME:
                     // save the connected device's name
@@ -115,8 +134,31 @@ public class MenuScreen extends AppCompatActivity implements NavigationView.OnNa
                 case Constants.MESSAGE_DISCONNECTED:
                     BTservice.disconnected();
                     System.out.println("Bluetooth Service was disconnected");
+                    Toast.makeText(mContext, "Disconnected from EPBand", Toast.LENGTH_LONG).show();
+                    if(mExerciseInProgress){
+                        try{
+                            mExercise.SetEndTime(new Date());
+                            mWorkout.getMotion().AddExerciseData(mExercise);
+                            mExercise = null;
+                            mExerciseInProgress = false;
+                            invalidateOptionsMenu();
+                        }catch(Exception ex){
+                            Toast.makeText(mContext,"Error with exercise. Discarding data.",Toast.LENGTH_SHORT);
+                        }
+                    }
+                    if(mWorkoutInProgress == workoutState.WORKOUT){
+                        try{
+                            mWorkout.writeFile();
+                            mWorkoutInProgress = workoutState.NONE;
+                            mWorkout = null;
+                            mHeartRate = null;
+                            mExercise = null;
+                            invalidateOptionsMenu();
+                        }catch(Exception ex){
 
-                    //TODO: handle ended/saving workouts
+                        }
+                    }
+
                     break;
             }
         }
@@ -305,6 +347,9 @@ public class MenuScreen extends AppCompatActivity implements NavigationView.OnNa
             case R.id.exercise_off:
                 mDialogEndExercise.show();
                 break;
+            case R.id.line_toggles:
+                mDialogToggleLines.show();
+                break;
         }
         return super.onOptionsItemSelected(item);
     }
@@ -483,7 +528,7 @@ public class MenuScreen extends AppCompatActivity implements NavigationView.OnNa
                             System.out.println("Exercise JSON: " + jObject.toString());
                             mExercise = new Exercise(jObject);
                             System.out.println("Chose to review: " + exercise + "\n" + mExercise.GetJSONString());
-                            mExercise.PlotAll(mLineChart);
+                            mExercise.PlotAll(mContext, mLineChart);
                             mGraphState = graphState.MOTION_REALTIME;
                         } catch (JSONException ex) {
                             System.out.println("JSONException for exercise review");
@@ -632,7 +677,7 @@ public class MenuScreen extends AppCompatActivity implements NavigationView.OnNa
                 case MOTION_REALTIME:
                     System.out.println("updateGraphVisibility() for MOTION_REALTIME");
                     try{
-                        mExercise.PlotAll(mLineChart);
+                        mExercise.PlotAll(mContext, mLineChart);
                     }catch (JSONException ex){
                         System.out.println("JSONException with exercise real time plot");
                     }
@@ -724,6 +769,7 @@ public class MenuScreen extends AppCompatActivity implements NavigationView.OnNa
         createDialogNextExercise();
         createDialogEndExercise();
         createDialogDeleteFiles();
+        createDialogToggleLines();
     }
 
     public void createDialogConnect(){
@@ -885,5 +931,52 @@ public class MenuScreen extends AppCompatActivity implements NavigationView.OnNa
                 System.out.println("cancel");
             }
         });
+    }
+
+    public void createDialogToggleLines(){
+        mDialogToggleLines = new AlertDialog.Builder(this);
+        final SharedPreferences Settings = getSharedPreferences("SETTINGS", MODE_PRIVATE);
+        mLineToggles = new boolean[6];
+        mLineToggles[0] = Settings.getBoolean("X", true);
+        mLineToggles[1] = Settings.getBoolean("Y", true);
+        mLineToggles[2] = Settings.getBoolean("Z", true);
+        mLineToggles[3] = Settings.getBoolean("RX", true);
+        mLineToggles[4] = Settings.getBoolean("RY", true);
+        mLineToggles[5] = Settings.getBoolean("RZ", true);
+        mDialogToggleLines.setTitle("Toggle Graph Lines")
+                .setIcon(R.drawable.ic_dumbell)
+
+                .setMultiChoiceItems(R.array.graphtoggles, mLineToggles, new DialogInterface.OnMultiChoiceClickListener() {
+                            @Override
+                            public void onClick(DialogInterface dialog, int which,
+                                                boolean isChecked) {
+                                if (isChecked) {
+                                    // If the user checked the item, add it to the selected items
+                                    mLineToggles[which] = true;
+                                } else {
+                                    // Else, if the item is already in the array, remove it
+                                    mLineToggles[which] = false;
+                                }
+                            }
+                        }
+                )
+                .setPositiveButton("Confirm", new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int id) {
+                        // User clicked OK, so save the mSelectedItems results somewhere
+                        // or return them to the component that opened the dialog
+                        SharedPreferences.Editor editor = Settings.edit();
+                        editor.putBoolean("X", mLineToggles[0]);
+                        editor.putBoolean("Y", mLineToggles[1]);
+                        editor.putBoolean("Z", mLineToggles[2]);
+                        editor.putBoolean("RX", mLineToggles[3]);
+                        editor.putBoolean("RY", mLineToggles[4]);
+                        editor.putBoolean("RZ", mLineToggles[5]);
+                        editor.apply();
+                    }
+                });
+
+
+
     }
 }
