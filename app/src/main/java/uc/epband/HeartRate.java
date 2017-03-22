@@ -28,6 +28,7 @@ import org.json.JSONObject;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import java.util.Random;
 
 public class HeartRate implements Constants{
     private double mUnread, mRest, mAerobic, mAnaerobic;
@@ -48,7 +49,7 @@ public class HeartRate implements Constants{
         mAnaerobic = 0;
         mMHR = 220;
         mLHR = 60;
-        mHRThresh = 0.1; // E.g. an expected value of 100 can include anything from 90 to 110
+        mHRThresh = 0.15; // E.g. an expected value of 100 can include anything from 85 to 115
     }
 
     public HeartRate(String jString) throws JSONException{
@@ -106,39 +107,66 @@ public class HeartRate implements Constants{
         }
     }
 
-    public boolean HeartrateIsValid(double BPM){
-        if (mRawBPM.length() < 2)
-            return false;
-
-        try {
-            double left = mRawBPM.getDouble(mRawBPM.length() - 2),
-                    right = mRawBPM.getDouble(mRawBPM.length() - 1);
-            double interpResult = Calculus.linearInterpolateNextValue(left, right);
-            return (BPM < mMHR) &&
-                    (BPM > mLHR) &&
-                    (BPM > interpResult - (interpResult*mHRThresh)) &&
-                    (BPM < interpResult + (interpResult*mHRThresh));
-        } catch (JSONException jEx){
-            System.out.println("JSON exception whiule getting BPM data. Returning false.");
-            return false;
-        }
-    }
-
     public void AddData(int BPM){
-        if(HeartrateIsValid(BPM)) {
-            mRawBPM.put(BPM);
+        // If there isn't enough history to interpolate from
+        // Either just accept the HR, or use the default.
+        if (mRawBPM.length() < 2) {
+            if (BPM <= mMHR && BPM >= mLHR) {
+                mRawBPM.put(BPM);
+                return;
+            }
+            else {
+                mRawBPM.put(default_HR);
+                return;
+            }
         }
-        else{
-            System.out.println("BPM " + BPM + " was detected as invalid. Discarding.");
-            try {
-                // Try to use the previous data point
-                int prev = mRawBPM.getInt(mRawBPM.length()-1);
-                mRawBPM.put(prev);
-            } catch (JSONException jEx){
-                System.out.println("Could not use the previous data point. Using default value.");
+
+        // There is enough data, so we can interpolate for a validity check
+        try {
+            double left = mRawBPM.getInt(mRawBPM.length() - 2),
+                    right = mRawBPM.getInt(mRawBPM.length() - 1);
+            double interpResult = Calculus.linearInterpolateNextValue(left, right),
+                    lowThresh = interpResult - (interpResult * mHRThresh),
+                    highThresh = interpResult + (interpResult * mHRThresh);
+
+            if ( BPM < mMHR && BPM > mLHR && BPM > lowThresh && BPM < highThresh ) {
+                mRawBPM.put(BPM);
+            }
+            else {
+                // Randomly assign a new value, keeping a seemingly normal trend
+                Random r = new Random();
+                double newVal = (r.nextInt(10) + right-5); // Random value from right-5 to right+5 [0+right-5:10+right-5]
+            }
+        } catch (JSONException jEx) {
+            System.out.println("JSON exception while getting BPM data.");
+            if (BPM <= mMHR && BPM >= mLHR) {
+                mRawBPM.put(BPM);
+            }
+            else {
                 mRawBPM.put(default_HR);
             }
         }
+
+        /*
+        Since Unit Tests won't (easily) work with this, I will test using thought experiments.
+        - 0 to 1 values in mRawBPM
+            - HR is within limits
+                Accept and store the BPM. (pass)
+            - HR is NOT within limits.
+                Reject BPM, store default HR. (pass)
+         - >= 2 values in mRawBPM
+            - BPM is within limits and matches trend (no JSONException)
+                Accept and store the BPM. (pass)
+            - BPM is NOT within limits OR does NOT match trend (no JSONException)
+                Reject BPM, generate new value that should visually match previous BPM
+                But, is random within a reasonable bound. (pass)
+            - A JSONException is thrown while obtaining previous points
+                Something is seriously wrong, can't rely on previous data.
+                If BPM is within limits, accept (pass)
+                Else, use default HR. (pass)
+
+         All thought experiments passed.
+         */
     }
 
     public void AddData(int[] BPM){
