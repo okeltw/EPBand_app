@@ -123,7 +123,7 @@ public class HeartRate implements Constants{
 
         // There is enough data, so we can interpolate for a validity check
         try {
-            double left = mRawBPM.getInt(mRawBPM.length() - 2),
+            int left = mRawBPM.getInt(mRawBPM.length() - 2),
                     right = mRawBPM.getInt(mRawBPM.length() - 1);
             double interpResult = Calculus.linearInterpolateNextValue(left, right),
                     lowThresh = interpResult - (interpResult * mHRThresh),
@@ -135,7 +135,14 @@ public class HeartRate implements Constants{
             else {
                 // Randomly assign a new value, keeping a seemingly normal trend
                 Random r = new Random();
-                double newVal = (r.nextInt(10) + right-5); // Random value from right-5 to right+5 [0+right-5:10+right-5]
+                int newVal;
+                if (right > default_HR) {
+                    newVal = (r.nextInt(5) + right - 5); // Random value from right-5 to right [0+right-5:5+right-5]
+                }
+                else {
+                    newVal = (r.nextInt(5) + right); // Random value form right to right+5
+                }
+                mRawBPM.put(newVal);
             }
         } catch (JSONException jEx) {
             System.out.println("JSON exception while getting BPM data.");
