@@ -59,7 +59,7 @@ public class MenuScreen extends AppCompatActivity implements NavigationView.OnNa
     private Boolean mExerciseInProgress;
 
     public enum graphState{
-        HEARTRATE_REALTIME, HEARTRATE_SUMMARY, MOTION_REALTIME, MOTION_SUMMARY, NONE
+        HEARTRATE_REALTIME, HEARTRATE_SUMMARY, MOTION_REALTIME, MOTION_SUMMARY, DISPLAY_SUMMARY, NONE
     }
     private graphState mGraphState;
     private LineChart mLineChart;
@@ -287,11 +287,18 @@ public class MenuScreen extends AppCompatActivity implements NavigationView.OnNa
         MenuItem displayAnalysis = menu.findItem(R.id.display_analysis);
         switch(mWorkoutInProgress){
             case REVIEW:
-                timeToggle.setEnabled(true).setVisible(true);
                 graphToggle.setEnabled(true).setVisible(true);
                 exerciseStart.setEnabled(false).setVisible(false);
                 exerciseStop.setEnabled(false).setVisible(false);
-                displayAnalysis.setEnabled(true).setVisible(true);
+                if(mExercise != null || mHeartRate != null) {
+                    timeToggle.setEnabled(true).setVisible(true);
+                    if(mExercise != null) displayAnalysis.setEnabled(true).setVisible(true);
+                    else displayAnalysis.setEnabled(false).setVisible(false);
+                }
+                else{
+                    displayAnalysis.setEnabled(false).setVisible(false);
+                    timeToggle.setEnabled(false).setVisible(false);
+                }
                 break;
             case WORKOUT:
                 timeToggle.setEnabled(false).setVisible(false);
@@ -362,7 +369,23 @@ public class MenuScreen extends AppCompatActivity implements NavigationView.OnNa
                 break;
             case R.id.display_analysis:
                 if (mExercise != null) {
-                    mExercise.DisplaySummary(mContext, mSummaryList);
+                    if(mSummaryList.getVisibility() == View.VISIBLE) {
+                        hideAllCharts();
+                        try {
+                            mExercise.PlotAngles(mLineChart);
+                            mGraphState = graphState.MOTION_SUMMARY;
+                        }catch(JSONException ex){
+
+                        }
+                    }
+                    else{
+                        try {
+                            mExercise.PrintAnalysis(mLineChart);
+                            mExercise.DisplaySummary(mContext, mSummaryList);
+                        }catch(JSONException ex){
+
+                        }
+                    }
                 }
                 else{
                     System.out.println("No exercise to display summary");
@@ -395,12 +418,12 @@ public class MenuScreen extends AppCompatActivity implements NavigationView.OnNa
                         Bundle bundle = mExercise.PrintAnalysis(mLineChart);
                         System.out.println(bundle.getString("Exercise"));
                         updateDisplayAnalysisDialog(bundle);
-                        mDialogDisplayAnalysis.show();
+                        //mDialogDisplayAnalysis.show();
                     }catch(JSONException ex){
                         System.out.println("Fuck");
                     }
                 }
-                mDialogDisplayAnalysis.show();
+                //mDialogDisplayAnalysis.show();
                 break;
             case R.id.nav_profile:
                 System.out.println("Menu: Profile");
@@ -565,6 +588,7 @@ public class MenuScreen extends AppCompatActivity implements NavigationView.OnNa
                     }
                     else if(index == 0){
                         hideAllCharts();
+                        mExercise = null;
                         mWorkout.plotHeartRateRealTime(mLineChart);
                         mGraphState = graphState.HEARTRATE_REALTIME;
                         System.out.println("Chose to review: Heart Rate");
@@ -713,13 +737,20 @@ public class MenuScreen extends AppCompatActivity implements NavigationView.OnNa
                     break;
                 case MOTION_SUMMARY:
                     System.out.println("updateGraphVisibility() for MOTION_SUMMARY");
-                    //mExercise.DisplaySummary(mContext, mSummaryList);
                     try{
                         mExercise.PlotAngles(mLineChart);
                     }
                     catch( JSONException ex){
                         System.out.println("Couldn't print angles");
                     }
+                    break;
+                case DISPLAY_SUMMARY:
+                    try {
+                        mExercise.analyzeRawData();
+                    }catch (JSONException ex){
+
+                    }
+                    mExercise.DisplaySummary(mContext, mSummaryList);
                     break;
             }
         }
@@ -812,6 +843,7 @@ public class MenuScreen extends AppCompatActivity implements NavigationView.OnNa
             public void onClick(DialogInterface dialog, int id) {
                 System.out.println("Bluetooth connect");
                 BTservice.connect();
+                if(!BTservice.isConnected()) Toast.makeText(mContext, "Cannot find EP Band",Toast.LENGTH_SHORT).show();
             }
         });
         mDialogConnect.setNegativeButton("Cancel", new DialogInterface.OnClickListener() {

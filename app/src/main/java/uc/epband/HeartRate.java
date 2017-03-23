@@ -129,7 +129,7 @@ public class HeartRate implements Constants{
                     lowThresh = interpResult - (interpResult * mHRThresh),
                     highThresh = interpResult + (interpResult * mHRThresh);
 
-            if ( BPM < mMHR && BPM > mLHR && BPM > lowThresh && BPM < highThresh ) {
+            if ( BPM < mMHR && BPM > mLHR && BPM < highThresh ) {
                 mRawBPM.put(BPM);
             }
             else {
@@ -217,7 +217,7 @@ public class HeartRate implements Constants{
             // CHART STYLE SETTINGS
             XAxis x = chart.getXAxis();
 
-            x.setValueFormatter(new TimeFormatter(100));
+            x.setValueFormatter(new TimeFormatter(1000));
             x.setEnabled(true);
             x.setAxisMaximum(entries.size());
             x.setLabelCount(5, true);
@@ -246,7 +246,7 @@ public class HeartRate implements Constants{
             chart.setPinchZoom(true);
             chart.setData(lineData);
 
-            String Label1 = REST + " " + Math.round(HR_REST * 100) + "% MHR";
+            String Label1 = "Resting " + Math.round(HR_REST * 100) + "% MHR";
             String Label2 = AEROBIC + " " + Math.round(HR_AEROBIC*100) + "% MHR";
             String Label3 = ANAEROBIC + " " + Math.round(HR_ANAEROBIC*100) + "% MHR";
             String Label4 = "MHR " + mMHR + " BPM";

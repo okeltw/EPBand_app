@@ -43,7 +43,7 @@ public interface Constants {
             CLEAN = "Clean",
             CLEAN_JERK = "Clean and Jerk";
 
-    String[] ExerciseList = {BICEP_CURL, HAMMER_CURL, REVERSE_CURL, SIDE_RAISE, FRONT_RAISE, SQUAT, OVERHEAD_PRESS, DEADLIFT, TRICEP_EXTENSION, POWER_CLEAN, CLEAN, CLEAN_JERK};
+    String[] ExerciseList = {BICEP_CURL, HAMMER_CURL, REVERSE_CURL, SIDE_RAISE, FRONT_RAISE, "DEMO_UNKNOWN"};
 
     //JSON TAG STRINGS
     String  /*Workout String*/

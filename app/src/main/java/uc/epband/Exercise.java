@@ -8,6 +8,7 @@ import android.util.Size;
 import android.view.View;
 import android.widget.ArrayAdapter;
 import android.widget.ListView;
+import android.widget.Toast;
 
 import com.github.mikephil.charting.charts.LineChart;
 import com.github.mikephil.charting.components.Legend;
@@ -59,6 +60,7 @@ public class Exercise implements Constants{
         mReps = 0;
         mGoalROM = 0.0;
         mAverageROM = 0.0;
+        stdDev = 0.0;
 
         SetStartTime(new Date());
     }
@@ -82,6 +84,7 @@ public class Exercise implements Constants{
         System.out.println("Used JSON Object to get ImportData");
         try {
             ImportExtra(jObject);
+            analyzeRawData();
             System.out.println("Used JSON Object to get ImportExtra");
         }catch(JSONException ex){
             System.out.println("Couldn't get ImportExtra");
@@ -199,16 +202,8 @@ public class Exercise implements Constants{
         ArrayList<Entry> Y_angle = new ArrayList<>();
         ArrayList<Entry> Z_angle = new ArrayList<>();
 
-        /*
-        System.out.println("Start: Get all angles");
-        mXAngle = getAllAngles(mDistY, mDistX, mDistZ);
-        mYAngle = getAllAngles(mDistX, mDistY, mDistZ);
-        mZAngle = getAllAngles(mDistZ, mDistX, mDistY);
-        System.out.println("Stop: Got all angles");
-        */
-
         for(int i = 0; i < mDistX.length(); i++){
-
+/*
             double x = mDistX.getDouble(i);
             double y = mDistY.getDouble(i);
             double z = mDistZ.getDouble(i);
@@ -218,12 +213,12 @@ public class Exercise implements Constants{
             X_angle.add(new Entry(i, (float) XAngle));
             Y_angle.add(new Entry(i, (float) YAngle));
             Z_angle.add(new Entry(i, (float) ZAngle));
+*/
 
-            /*
             X_angle.add(new Entry(i, (float) mXAngle[i]));
             Y_angle.add(new Entry(i, (float) mYAngle[i]));
             Z_angle.add(new Entry(i, (float) mZAngle[i]));
-            */
+
         }
 
         if(!X_angle.isEmpty()) lines = MultipleLines(lines, X_angle, "X Angle", C_RX, YAxis.AxisDependency.LEFT);
@@ -247,7 +242,7 @@ public class Exercise implements Constants{
         x.setTextColor(Color.WHITE);
         x.setAxisMaximum(X_angle.size());
         x.setPosition(XAxis.XAxisPosition.BOTTOM);
-        x.setValueFormatter(new TimeFormatter(10));
+        x.setValueFormatter(new TimeFormatter(100));
 
         chart.getAxisRight().setEnabled(false);
         YAxis yRot = chart.getAxisLeft();
@@ -298,10 +293,10 @@ public class Exercise implements Constants{
     public void SetEndTime(Date endDate) throws ParseException{
         Date start = C_DATE_FORMAT.parse(mStartTime);
         if(endDate.after(start)){
-            mTimeLength = C_DATE_FORMAT.format(new Date(endDate.getTime() - start.getTime()));
+            mTimeLength = C_TIME_SIMPLE_FORMAT.format(new Date(endDate.getTime() - start.getTime()));
         }
         else{
-            mTimeLength = C_DATE_FORMAT.format(new Date(0));
+            mTimeLength = C_TIME_SIMPLE_FORMAT.format(new Date(0));
             mValid = false;
         }
     }
@@ -386,22 +381,59 @@ public class Exercise implements Constants{
     }
 
     public void DisplaySummary(Context context, ListView summaryList){
-        ArrayAdapter<String> adapter = new ArrayAdapter<String>(context, android.R.layout.simple_list_item_1);
-        adapter.add("Name: " + mExercise);
-        adapter.add("Start Time: " + mStartTime);
-        adapter.add("Total Time: " + mTimeLength);
-        adapter.add("Sampled at: " + mSampleStep);
-        adapter.add("Reps: " + mReps);
-        adapter.add("Average ROM: " + mAverageROM);
-        adapter.add("Consistency: " + stdDev);
+        switch(mExercise){
+            case BICEP_CURL:
+            case HAMMER_CURL:
+            case REVERSE_CURL:
+            case SIDE_RAISE:
+            case FRONT_RAISE:
+                try {
+                    analyzeRawData();
+                    ArrayAdapter<String> adapter = new ArrayAdapter<String>(context, android.R.layout.simple_list_item_1);
+                    adapter.add("Name: " + mExercise);
+                    adapter.add("Start Time: " + mStartTime);
+                    //adapter.add("Total Time: " + mTimeLength);
+                    mSampleStep = "100 ms";
+                    adapter.add("Sampled at: " + mSampleStep);
+                    adapter.add("Reps: " + mReps);
+                    adapter.add("Average ROM: " + DecForm.format(mAverageROM * 100) + "%");
+                    adapter.add("Variance: " + DecForm.format(Math.abs(stdDev) * 100) + "%");
 
-        summaryList.setAdapter(adapter);
-        summaryList.setVisibility(View.VISIBLE);
+                    summaryList.setAdapter(adapter);
+                    summaryList.setVisibility(View.VISIBLE);
+                }catch(JSONException ex){
+
+                }
+                break;
+            default:
+                Toast.makeText(context, "No analysis available for this type of exercise",Toast.LENGTH_SHORT).show();
+                break;
+        }
     }
 
-    public LimitLine[] getLimitLine(LineChart chart, float goal, float tolerancePercent, String label, int color){
+    public LimitLine[] getLimitLine(LineChart chart, float upGoal, float downGoal, float tolerancePercent, String label, int color){
         if(tolerancePercent > 1.0) tolerancePercent = tolerancePercent/100.0f;
-        LimitLine[] returnLines = new LimitLine[3];
+        LimitLine[] returnLines = new LimitLine[2];
+
+        float fullrange = upGoal - downGoal;
+        float median = (upGoal + downGoal)/2;
+        returnLines[0] = new LimitLine(median + tolerancePercent*fullrange/2, label + " Goal");
+        returnLines[0].setLineColor(Color.WHITE);
+        returnLines[0].enableDashedLine(24.0f, 24.0f, 0.0f);
+        returnLines[0].setLineWidth(2f);
+        returnLines[0].setTextSize(14f);
+        returnLines[0].setTextColor(Color.WHITE);
+        returnLines[0].setLabelPosition(LimitLine.LimitLabelPosition.LEFT_TOP);
+
+
+        returnLines[1] = new LimitLine(median - tolerancePercent*fullrange/2, label + " Goal");
+        returnLines[1].setLineColor(Color.WHITE);
+        returnLines[1].enableDashedLine(24.0f, 24.0f, 1.0f);
+        returnLines[1].setLineWidth(2f);
+        returnLines[1].setTextSize(14f);
+        returnLines[1].setTextColor(Color.WHITE);
+        returnLines[1].setLabelPosition(LimitLine.LimitLabelPosition.LEFT_BOTTOM);
+        /*
         returnLines[0] = new LimitLine(goal*tolerancePercent);
         returnLines[0].setLineColor(color);
         returnLines[0].enableDashedLine(12.0f, 12.0f,1.0f);
@@ -417,6 +449,7 @@ public class Exercise implements Constants{
         returnLines[2].setLineColor(color);
         returnLines[2].enableDashedLine(12.0f, 12.0f, 1.0f);
         //returnLines[2].setLineWidth(1f);
+        */
 
 
         return returnLines;
@@ -461,67 +494,9 @@ public class Exercise implements Constants{
         return ret;
     }
 
-    public int countReps(AXIS_OF_ROTATION axis, Boolean startLow){
-        int reps = 0;
-        double[] data;
-
-        // Extract the data, handling a potential JSON error by printing the stack trace.
-        // ATM, I do not know how to gracefully handle such an error.
-        // We may need to construct an error statement on the app
-        // and/or figure out how to recover
-        try {
-            switch (axis) {
-                case AXIS_X:
-                    data = this.GetmRotXArray();
-                    break;
-                case AXIS_Y:
-                    data = this.GetmRotYArray();
-                    break;
-                case AXIS_Z:
-                    data = this.GetmRotZArray();
-                    break;
-                default: // This is not possible, but initialize empty array to catch weirdness
-                    data = new double[0];
-                    break;
-            }
-        } catch (JSONException ex){
-            System.out.println("Could not read Java data.");
-            ex.printStackTrace();
-            return 0;
-        }
-
-        // Flag for direction
-        boolean upstroke = startLow;
-
-        // For each point of data
-        for (double point : data){
-            // If user was moving up previously, but the acceleration is now in a different direction...
-            if (upstroke && (point < 0)){
-                // Signal new direction
-                upstroke = false;
-
-                // If we started high, this change of direction marks a repetition.
-                if(!startLow)
-                    reps += 1;
-            }
-            // Same idea as last block
-            else if(!upstroke && (point > 0)) {
-                upstroke = true;
-                if(startLow)
-                    reps += 1;
-            }
-            // else the user is moving in the same direction, continue to the next point
-        }
-
-        // Return the count
-        return reps;
-    }
-
-    public Bundle PrintAnalysis(LineChart chart) throws JSONException{
+    public void analyzeRawData() throws JSONException{
         int size = mDistX.length();
-        Bundle bundle = new Bundle();
-        System.out.println("Data size: " + size);
-        if(size > 0) {
+        if (size > 0) {
             mXAngle = new double[size];
             mYAngle = new double[size];
             mZAngle = new double[size];
@@ -533,37 +508,53 @@ public class Exercise implements Constants{
                 mYAngle[i] = getAngle(x, y, z);
                 mZAngle[i] = getAngle(z, x, y);
             }
+        }
+    }
 
+    public Bundle PrintAnalysis(LineChart chart) throws JSONException{
+        int size = mDistX.length();
+        Bundle bundle = new Bundle();
+        System.out.println("Data size: " + size);
+        if(size > 0) {
+            analyzeRawData();
             LimitLine[] limits;
+            chart.getAxisLeft().setDrawLimitLinesBehindData(false);
+            chart.getAxisRight().setDrawLimitLinesBehindData(false);
             switch (mExercise) {
                 case BICEP_CURL:
-                    limits = getLimitLine(chart, 70.0f, (float)mGoalROM, "End Position", Color.RED);
+                    limits = getLimitLine(chart, 75.0f, 75.0f, (float)mGoalROM, "X Angle", Color.RED);
                     chart.getAxisLeft().addLimitLine(limits[0]);
                     chart.getAxisLeft().addLimitLine(limits[1]);
-                    chart.getAxisLeft().addLimitLine(limits[2]);
-                    bundle = SingleAngleAnalysis(mXAngle, 70.0, -70.0, false);
+                    //chart.getAxisLeft().addLimitLine(limits[2]);
+                    bundle = SingleAngleAnalysis(mXAngle, 75.0, -75.0, true);
                     break;
                 case SIDE_RAISE:
-                case FRONT_RAISE:
-                    limits = getLimitLine(chart, 90.0f, (float)mGoalROM, "End Position", Color.RED);
+                    limits = getLimitLine(chart, 90.0f, 0.0f, (float)mGoalROM, "X Angle", Color.RED);
                     chart.getAxisLeft().addLimitLine(limits[0]);
                     chart.getAxisLeft().addLimitLine(limits[1]);
-                    chart.getAxisLeft().addLimitLine(limits[2]);
-                    bundle = SingleAngleAnalysis(mXAngle, 90.0, 0.0, false);
+                    //chart.getAxisLeft().addLimitLine(limits[2]);
+                    bundle = SingleAngleAnalysis(mXAngle, 90.0, 0.0, true);
+                    break;
+                case FRONT_RAISE:
+                    limits = getLimitLine(chart, 90.0f, 0.0f, (float)mGoalROM, "X Angle", Color.RED);
+                    chart.getAxisLeft().addLimitLine(limits[0]);
+                    chart.getAxisLeft().addLimitLine(limits[1]);
+                    //chart.getAxisLeft().addLimitLine(limits[2]);
+                    bundle = SingleAngleAnalysis(mXAngle, 90.0, 0.0, true);
                     break;
                 case REVERSE_CURL:
-                    limits = getLimitLine(chart, 70.0f, (float)mGoalROM, "End Position", Color.RED);
+                    limits = getLimitLine(chart, 75.0f, -75.0f, (float)mGoalROM, "X Angle", Color.RED);
                     chart.getAxisLeft().addLimitLine(limits[0]);
                     chart.getAxisLeft().addLimitLine(limits[1]);
-                    chart.getAxisLeft().addLimitLine(limits[2]);
-                    bundle = SingleAngleAnalysis(mXAngle, 70.0, -70.0, false);
+                    //chart.getAxisLeft().addLimitLine(limits[2]);
+                    bundle = SingleAngleAnalysis(mXAngle, 75.0, -75.0, true);
                     break;
                 case HAMMER_CURL:
-                    limits = getLimitLine(chart, 70.0f, (float)mGoalROM, "End Position", Color.RED);
+                    limits = getLimitLine(chart, 75.0f, -75.0f, (float)mGoalROM, "X Angle", Color.RED);
                     chart.getAxisLeft().addLimitLine(limits[0]);
                     chart.getAxisLeft().addLimitLine(limits[1]);
-                    chart.getAxisLeft().addLimitLine(limits[2]);
-                    bundle = SingleAngleAnalysis(mXAngle, 70.0, -70.0, false);
+                    //chart.getAxisLeft().addLimitLine(limits[2]);
+                    bundle = SingleAngleAnalysis(mXAngle, 75.0, -75.0, true);
                     break;
                 default:
                     System.out.println("Not a valid exercise");
@@ -616,7 +607,10 @@ public class Exercise implements Constants{
         Bundle bundle = new Bundle();
         mAverageROM = 0.0;
         if(RepMaxs.size() > 0) {
-            for(int i = 0; i < RepMaxs.size(); i++) mAverageROM += RepMaxs.get(i);
+            for(int i = 0; i < RepMaxs.size(); i++){
+                mAverageROM += RepMaxs.get(i);
+                System.out.println("average ROM: " + mAverageROM);
+            }
 
             mAverageROM /= RepMaxs.size();
             double goal = (startUpstroke) ? upGoal : downGoal;

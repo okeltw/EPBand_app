@@ -21,7 +21,7 @@
         <item
             android:id="@+id/nav_review"
             android:icon="@drawable/ic_chart_24dp"
-            android:title="Review" />
+            android:title="Workout Logs" />
 
         <item
             android:id="@+id/nav_workout_start"
