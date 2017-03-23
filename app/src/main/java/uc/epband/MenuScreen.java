@@ -372,7 +372,7 @@ public class MenuScreen extends AppCompatActivity implements NavigationView.OnNa
                     if(mSummaryList.getVisibility() == View.VISIBLE) {
                         hideAllCharts();
                         try {
-                            mExercise.PlotAngles(mLineChart);
+                            mExercise.PlotAngles(mContext, mLineChart);
                             mGraphState = graphState.MOTION_SUMMARY;
                         }catch(JSONException ex){
 
@@ -717,7 +717,6 @@ public class MenuScreen extends AppCompatActivity implements NavigationView.OnNa
             return;
         }
         else if(mWorkoutInProgress != workoutState.NONE){
-            hideAllCharts();
             switch (mGraphState) {
                 case HEARTRATE_REALTIME:
                     System.out.println("updateGraphVisibility() for HEARTRATE_REALTIME");
@@ -738,7 +737,7 @@ public class MenuScreen extends AppCompatActivity implements NavigationView.OnNa
                 case MOTION_SUMMARY:
                     System.out.println("updateGraphVisibility() for MOTION_SUMMARY");
                     try{
-                        mExercise.PlotAngles(mLineChart);
+                        mExercise.PlotAngles(mContext, mLineChart);
                     }
                     catch( JSONException ex){
                         System.out.println("Couldn't print angles");
@@ -1037,13 +1036,16 @@ public class MenuScreen extends AppCompatActivity implements NavigationView.OnNa
     public void createDialogToggleLines(){
         mDialogToggleLines = new AlertDialog.Builder(this);
         final SharedPreferences Settings = getSharedPreferences("SETTINGS", MODE_PRIVATE);
-        mLineToggles = new boolean[6];
+        mLineToggles = new boolean[9];
         mLineToggles[0] = Settings.getBoolean("X", true);
         mLineToggles[1] = Settings.getBoolean("Y", true);
         mLineToggles[2] = Settings.getBoolean("Z", true);
         mLineToggles[3] = Settings.getBoolean("RX", true);
         mLineToggles[4] = Settings.getBoolean("RY", true);
         mLineToggles[5] = Settings.getBoolean("RZ", true);
+        mLineToggles[6] = Settings.getBoolean("AX", true);
+        mLineToggles[7] = Settings.getBoolean("AY", true);
+        mLineToggles[8] = Settings.getBoolean("AZ", true);
         mDialogToggleLines.setTitle("Toggle Graph Lines")
                 .setIcon(R.drawable.ic_dumbell)
 
@@ -1073,7 +1075,11 @@ public class MenuScreen extends AppCompatActivity implements NavigationView.OnNa
                         editor.putBoolean("RX", mLineToggles[3]);
                         editor.putBoolean("RY", mLineToggles[4]);
                         editor.putBoolean("RZ", mLineToggles[5]);
+                        editor.putBoolean("AX", mLineToggles[6]);
+                        editor.putBoolean("AY", mLineToggles[7]);
+                        editor.putBoolean("AZ", mLineToggles[8]);
                         editor.apply();
+                        updateGraphVisibility();
                     }
                 });
 

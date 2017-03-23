@@ -196,7 +196,7 @@ public class Exercise implements Constants{
         mRotZ.put(val);
     }
 
-    public void PlotAngles(LineChart chart) throws JSONException{
+    public void PlotAngles(Context context, LineChart chart) throws JSONException{
         ArrayList<ILineDataSet> lines = new ArrayList<> ();
         ArrayList<Entry> X_angle = new ArrayList<>();
         ArrayList<Entry> Y_angle = new ArrayList<>();
@@ -221,9 +221,15 @@ public class Exercise implements Constants{
 
         }
 
-        if(!X_angle.isEmpty()) lines = MultipleLines(lines, X_angle, "X Angle", C_RX, YAxis.AxisDependency.LEFT);
-        if(!Y_angle.isEmpty()) lines = MultipleLines(lines, Y_angle, "Y Angle", C_RY, YAxis.AxisDependency.LEFT);
-        if(!Z_angle.isEmpty()) lines = MultipleLines(lines, Z_angle, "Z Angle", C_RZ, YAxis.AxisDependency.LEFT);
+        final SharedPreferences Settings = context.getSharedPreferences("SETTINGS", context.MODE_PRIVATE);
+        boolean[] mLineToggles = new boolean[3];
+        mLineToggles[0] = Settings.getBoolean("AX", true);
+        mLineToggles[1] = Settings.getBoolean("AY", true);
+        mLineToggles[2] = Settings.getBoolean("AZ", true);
+
+        if(!X_angle.isEmpty() && mLineToggles[0]) lines = MultipleLines(lines, X_angle, "X Angle", C_RX, YAxis.AxisDependency.LEFT);
+        if(!Y_angle.isEmpty() && mLineToggles[1]) lines = MultipleLines(lines, Y_angle, "Y Angle", C_RY, YAxis.AxisDependency.LEFT);
+        if(!Z_angle.isEmpty() && mLineToggles[2]) lines = MultipleLines(lines, Z_angle, "Z Angle", C_RZ, YAxis.AxisDependency.LEFT);
 
         Legend legend = chart.getLegend();
         legend.setEnabled(true);
@@ -231,9 +237,11 @@ public class Exercise implements Constants{
         legend.setWordWrapEnabled(true);
 
         chart.setVisibility(View.VISIBLE);
-        chart.setPinchZoom(true);
+        chart.setPinchZoom(false);
         chart.setDoubleTapToZoomEnabled(true);
         chart.setDragEnabled(true);
+        chart.setVerticalScrollBarEnabled(true);
+        chart.setHorizontalScrollBarEnabled(true);
 
         XAxis x = chart.getXAxis();
         x.setEnabled(true);
@@ -330,9 +338,11 @@ public class Exercise implements Constants{
         legend.setWordWrapEnabled(true);
 
         chart.setVisibility(View.VISIBLE);
-        chart.setPinchZoom(true);
+        chart.setPinchZoom(false);
         chart.setDoubleTapToZoomEnabled(true);
         chart.setDragEnabled(true);
+        chart.setVerticalScrollBarEnabled(true);
+        chart.setHorizontalScrollBarEnabled(true);
 
         XAxis x = chart.getXAxis();
         x.setEnabled(true);

@@ -243,8 +243,10 @@ public class HeartRate implements Constants{
             // Limit lines for Heart Rate Levels
             LineData lineData = new LineData(dataSet);
             chart.setDragEnabled(true);
-            chart.setPinchZoom(true);
+            chart.setPinchZoom(false);
             chart.setData(lineData);
+            chart.setVerticalScrollBarEnabled(true);
+            chart.setHorizontalScrollBarEnabled(true);
 
             String Label1 = "Resting " + Math.round(HR_REST * 100) + "% MHR";
             String Label2 = AEROBIC + " " + Math.round(HR_AEROBIC*100) + "% MHR";

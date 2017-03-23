@@ -8,6 +8,9 @@
         <item>X Gyro</item>
         <item>Y Gyro</item>
         <item>Z Gyro</item>
+        <item>X Angle</item>
+        <item>Y Angle</item>
+        <item>Z Angle</item>
     </string-array>
 
 </resources>
