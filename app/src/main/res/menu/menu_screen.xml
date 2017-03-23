@@ -24,11 +24,11 @@
 
     <item
         android:id="@+id/bluetooth_status"
-        android:orderInCategory="4"
+        android:orderInCategory="5"
         android:title="Bluetooth"
-        app:showAsAction="always"
+        app:showAsAction="ifRoom"
         android:icon="@drawable/ic_bluetooth_24dp"
-        android:visible="true" />
+        android:visible="true"/>
 
     <item
         android:id="@+id/time_toggle"
@@ -43,7 +43,7 @@
         android:orderInCategory="4"
         android:title="Display Analysis"
         app:showAsAction="always"
-        android:icon="@drawable/ic_menu_gallery"
+        android:icon="@drawable/ic_description_24dp"
         android:visible="false"/>
 
     <item
