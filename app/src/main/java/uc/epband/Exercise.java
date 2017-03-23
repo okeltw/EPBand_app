@@ -522,7 +522,7 @@ public class Exercise implements Constants{
             chart.getAxisRight().setDrawLimitLinesBehindData(false);
             switch (mExercise) {
                 case BICEP_CURL:
-                    limits = getLimitLine(chart, 75.0f, 75.0f, (float)mGoalROM, "X Angle", Color.RED);
+                    limits = getLimitLine(chart, 75.0f, -75.0f, (float)mGoalROM, "X Angle", Color.RED);
                     chart.getAxisLeft().addLimitLine(limits[0]);
                     chart.getAxisLeft().addLimitLine(limits[1]);
                     //chart.getAxisLeft().addLimitLine(limits[2]);
